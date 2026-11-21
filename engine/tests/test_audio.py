@@ -18,6 +18,22 @@ class AudioAnalysisTests(unittest.TestCase):
             wav.setframerate(rate)
             wav.writeframes(frames)
 
+    def make_click_track(self, path: Path, bpm=120, seconds=10, rate=16000):
+        frames = bytearray()
+        interval = int(rate * 60 / bpm)
+        click_length = int(rate * 0.015)
+        for index in range(rate * seconds):
+            if index % interval < click_length:
+                sample = int(0.6 * 32767 * math.sin(2 * math.pi * 900 * (index % interval) / rate))
+            else:
+                sample = 0
+            frames.extend(sample.to_bytes(2, "little", signed=True))
+        with wave.open(str(path), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(rate)
+            wav.writeframes(frames)
+
     def test_reads_wav_and_estimates_pitch(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "tone.wav"
@@ -25,8 +41,16 @@ class AudioAnalysisTests(unittest.TestCase):
             result = analyze_wav(path)
             self.assertEqual(result["sample_rate"], 16000)
             self.assertAlmostEqual(result["duration_seconds"], 0.5, places=2)
-            self.assertGreater(result["peak"], 0.4)
+            self.assertGreater(result["rms"], 0.2)
             self.assertAlmostEqual(result["pitch_hz"], 220.0, delta=8.0)
+            self.assertGreaterEqual(result["pitch_frame_count"], 1)
+
+    def test_estimates_click_track_tempo(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "click.wav"
+            self.make_click_track(path)
+            result = analyze_wav(path)
+            self.assertAlmostEqual(result["tempo_bpm"], 120.0, delta=2.0)
 
     def test_source_file_is_not_modified(self):
         with tempfile.TemporaryDirectory() as folder:
