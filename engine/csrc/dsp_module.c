@@ -94,6 +94,12 @@ static PyObject *analyze_pcm(PyObject *self, PyObject *args) {
                     best_corr = corr;
                     best_lag = lag;
                 }
+                /* Prefer the first strong period to avoid selecting a subharmonic. */
+                if (corr >= 0.90) {
+                    best_corr = corr;
+                    best_lag = lag;
+                    break;
+                }
             }
         }
     }
