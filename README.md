@@ -2,6 +2,10 @@
 
 An iPad-focused tool for creating UTAU-compatible voicebanks and producing singing vocals.
 
+## Current development focus
+
+The first implementation milestone is Song Studio: importing audio, preserving a local copy, and basic playback. Audio analysis and editing will be added in later steps.
+
 ## Project goals
 
 - Guide beginners through voicebank recording, review, and correction.
@@ -18,13 +22,20 @@ An iPad-focused tool for creating UTAU-compatible voicebanks and producing singi
 - Keep raw audio safe even when analysis or export fails.
 - Prefer a simple beginner workflow, with advanced controls available when needed.
 
-## Planned structure
+## Source layout
 
-- `docs/` — architecture, workflow, and development notes
-- `Sources/VoiceBankStudio/` — application source code
-- `Tests/` — automated tests
-- `Resources/` — app resources
+- `docs/` — architecture and development roadmap
+- `Sources/VoiceBankStudio/App/` — application entry point
+- `Sources/VoiceBankStudio/SongStudio/` — song creation and playback interface
 
-## Status
+## Current status
 
-Early planning and repository setup. Features are not implemented yet.
+- [x] Initial SwiftUI app entry point
+- [x] First Song Studio screen
+- [x] Import and copy one audio file into the app's Documents folder
+- [x] Basic play, pause, and stop controls
+- [ ] Song project metadata and autosave
+- [ ] Waveform and audio analysis
+- [ ] Editable notes, lyrics, and tracks
+
+The initial source files have not yet been compiled or tested in Xcode on an iPad.
