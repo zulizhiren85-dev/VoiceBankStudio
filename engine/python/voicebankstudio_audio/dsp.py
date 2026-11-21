@@ -46,7 +46,7 @@ def analyze_pcm(data: bytes, sample_rate: int, channels: int, sample_width: int)
             if corr > best_corr:
                 best_corr, best_lag = corr, lag
             # Prefer the first strong period to avoid selecting a subharmonic.
-            if corr >= 0.90:
+            if corr >= 0.99:
                 best_corr, best_lag = corr, lag
                 break
     return {
