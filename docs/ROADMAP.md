@@ -1,71 +1,59 @@
 # VoiceBankStudio — Development Roadmap
 
-The first development priority is **Song Studio and Audio Analysis**. Voicebank recording and creation will follow after the song workflow has a usable foundation.
+The implementation order is fixed by the project owner:
 
-This roadmap describes the intended order. It does not mean the features are already implemented.
+1. **Audio analysis**
+2. **Voicebank sample import (原音読み込み)**
+3. **Song creation**
 
-## Phase 1 — Song project foundation
+Each stage must be tested before moving to the next. Existing SwiftUI source and the GitHub Pages prototype are preserved during this rebuild.
+
+## Phase 1 — Audio analysis (current priority)
+
+- Import local WAV audio without modifying the original.
+- Inspect format, duration, sample rate, channel count, and audio level.
+- Build a time-based pitch estimate with note names and confidence values.
+- Estimate BPM and rhythmic pulse from the audio envelope.
+- Display all analysis as provisional, editable suggestions.
+- Distinguish vocal, instrumental, and mixed audio where possible; do not claim reliable classification until validated.
+- Later extend to chord estimation, beat positions, melody extraction, and source alignment/separation.
+- Process long audio in bounded chunks; provide progress, cancellation, and recovery.
+- Keep all core processing local and offline.
+
+**Current implementation:** Python WAV PCM reader, optional native C DSP extension, pure-Python fallback, pitch-window timeline, rough BPM estimate, and automated tests. This is an early analysis foundation, not full song transcription. Chord analysis, accurate polyphonic melody extraction, vocal separation, and a user-facing iPad analysis screen are not yet implemented.
+
+**Completion goal:** A user can select a WAV, run local analysis, inspect approximate pitch and tempo results, and correct or reject them.
+
+## Phase 2 — Voicebank sample import (原音読み込み)
+
+- Import an existing UTAU voicebank folder or ZIP package.
+- Parse and validate oto.ini.
+- Read voicebank metadata and sample WAV files without changing them.
+- Support VCV (連続音), CV, and relevant UTAU aliases.
+- Support multiple pitch layers and voicebank variants, including the planned 7-pitch VCV Weak bank.
+- Show missing samples, invalid aliases, and malformed oto.ini entries clearly.
+- Preview a selected sample and allow safe, non-destructive correction of oto.ini parameters.
+- Preserve the imported source folder; save corrections as project data or an exported copy.
+
+**Completion goal:** A user can import a voicebank, inspect its samples and oto.ini settings, audition entries, and select it for a song project.
+
+## Phase 3 — Song creation
 
 - Create, open, rename, and save song projects.
-- Import an original song, an instrumental, or vocal-only audio.
-- Preserve imported source files unchanged.
-- Display audio duration and basic playback controls.
-- Add autosave and recovery for song project data.
-- Keep all network-dependent features disabled on cellular data; core local work must function offline.
+- Import an instrumental, original mix, or vocal-only audio.
+- Enter notes and lyrics with a simple workflow such as C4 / あ / 1 beat.
+- Use analysis suggestions as a starting point, then allow manual editing of pitch, lyric/phoneme, duration, and timing.
+- Provide main, secondary vocal, harmony, chorus, and instrumental tracks.
+- Assign the same or different voicebanks to vocal tracks.
+- Connect note/lyric data to a UTAU-compatible synthesis engine.
+- Preview and render vocal tracks, mix them with the unchanged instrumental, and export audio.
+- Add an optional piano-roll editor later as an advanced view.
 
-**Completion goal:** A user can create a song project, import audio, listen to it, save it, close it, and reopen it without losing the source files or project state.
+**Completion goal:** A user can build an editable song, synthesize it with an imported voicebank, mix it with an instrumental, and export the result.
 
-## Phase 2 — Audio analysis
+## Later phases
 
-- Analyze audio duration, waveform, approximate tempo, and beat positions.
-- Estimate pitch and note timing from vocal audio.
-- Estimate lyric/phoneme timing where feasible and allow manual correction.
-- Identify possible main vocal, harmony, and chorus parts, while treating classification as a suggestion.
-- Present all automatic results as provisional and editable.
-- Provide clear confidence or warning information when an estimate may be unreliable.
-
-**Completion goal:** A user can import vocal audio, run local analysis, inspect the proposed notes and timing, and correct mistakes manually.
-
-## Phase 3 — Original and instrumental alignment
-
-- Support importing an original mix and its corresponding instrumental.
-- Estimate and adjust start-time offset.
-- Offer phase-inversion subtraction only when the audio sources are sufficiently matched in timing, gain, phase, and content.
-- Detect or warn about mismatch and time drift where possible.
-- Offer optional source separation as a fallback path when subtraction is unsuitable.
-- Never replace or destructively modify the imported instrumental.
-
-**Completion goal:** A user can align a suitable original/instrumental pair, preview the result, and choose a suitable vocal-extraction method without losing either source.
-
-## Phase 4 — Editable song arrangement
-
-- Provide a beginner-friendly note and lyric entry workflow, for example `C4 / あ / 1 beat`.
-- Allow edits to pitch, lyric/phoneme, duration, and timing.
-- Provide a simple track view for main vocal, secondary vocal, harmony, chorus, and instrumental.
-- Allow automatic track-role suggestions to be corrected manually.
-- Support a piano-roll-style editor later as an optional advanced view.
-
-**Completion goal:** A user can build and edit a song's vocal arrangement without needing to operate a complex piano roll.
-
-## Phase 5 — Voicebank assignment and vocal synthesis
-
-- Assign one voicebank to all vocal tracks or different voicebanks to main and secondary tracks.
-- Allow reassignment later with confirmation.
-- Connect the editable note/lyric data to a UTAU-compatible synthesis engine.
-- Preview and render vocal tracks independently.
-
-**Completion goal:** A user can synthesize editable vocal tracks from the song arrangement using selected voicebanks.
-
-## Phase 6 — Mixing and export
-
-- Mix synthesized vocals with the unchanged instrumental.
-- Provide basic volume, pan, and track mute/solo controls.
-- Preview the complete result.
-- Export the finished audio and save the editable project.
-
-**Completion goal:** A user can export a finished cover or original song project.
-
-## Phase 7 — Voicebank creation
+### Voicebank creation and recording
 
 - Add guided voicebank recording.
 - Split recordings into individual WAV samples.
@@ -73,15 +61,17 @@ This roadmap describes the intended order. It does not mean the features are alr
 - Generate editable oto.ini suggestions.
 - Support manual adjustment, audition, and UTAU-compatible voicebank export.
 
-**Completion goal:** A user can create and export a voicebank from guided recordings.
+### Projects, backup, and sync
 
-## Phase 8 — Backup, sync, and refinement
+- Use stable project UUIDs and portable .voiceproj packages.
+- Add autosave, recovery, and multiple versioned local backups.
+- Add optional Google Drive synchronization with Wi-Fi-only transfers, pause/resume, retry, and non-destructive versioning.
 
-- Add versioned local backups and safe restore.
-- Add optional Google Drive synchronization with Wi-Fi-only transfers, pause/resume, and retry.
-- Improve performance, accessibility, error recovery, and beginner guidance.
-- Validate behavior on the target iPadOS versions and devices.
+## Development rules
 
-## Development rule
-
-Build and test one small, usable step at a time. Prioritize reliable local saving and preservation of original audio before adding complex analysis, cloud features, or synthesis. Keep expensive or network-dependent processing optional and transparent.
+- Do not remove the existing SwiftUI source or browser prototype while the new engine is being built.
+- Preserve source audio and voicebank files; never overwrite imported originals.
+- Keep network access optional, disabled on cellular, and inactive by default.
+- Make automated analysis provisional and editable.
+- Build and test one stage at a time. Do not begin the next stage until the current stage has a usable, tested foundation.
+- Prioritize low memory use, short processing chunks, and understandable errors for iPad.
