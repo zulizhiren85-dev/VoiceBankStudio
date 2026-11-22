@@ -216,6 +216,6 @@ async function playNotes(notes,options={}){
  return {scheduled:plans.length,aliases:plans.map(p=>p.row.alias)};
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
-window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
+window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,getAliases:()=>state.rows.map(row=>row.alias),playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
 
 })();
