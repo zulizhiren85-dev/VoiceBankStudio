@@ -91,7 +91,8 @@ jobs:
               result = json.load(f)
           assert result["loaded"] is True, result
           assert result["otoCount"] == 1, result
-          assert result["vcvPhonemesForTestNote"] == ["あ"], result
+          assert result["phonemizerTests"]["vcv"] == ["あ"], result
+          assert result["phonemizerTests"]["cvvc"] == ["あ"], result
           print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
           PY
 
