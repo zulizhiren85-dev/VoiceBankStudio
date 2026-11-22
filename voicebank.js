@@ -146,7 +146,7 @@ async function playNotes(notes,options={}){
  const bpm=Math.max(40,Math.min(240,Number(options.bpm)||120)),unit=60/bpm,volume=Math.max(0,Math.min(100,Number(options.volume??35)))/100*.65,now=synthContext.currentTime+.08;
  for(let i=0;i<plans.length;i++){
   const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);if(!hz)continue;
-  const folderPitch=row.file.match(/(?:^|\\/)([A-G](?:#|b)?-?\\d)(?:\\/|$)/i);
+  const folderPitch=row.file.split("/").find(part=>/^[A-G](?:#|b)?-?\d$/i.test(part));
   const root=folderPitch?noteHz(folderPitch[1]):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
   const noteStart=now+start*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
