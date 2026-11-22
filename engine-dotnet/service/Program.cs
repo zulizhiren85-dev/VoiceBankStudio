@@ -12,6 +12,11 @@ string[] requiredPhonemizers =
 };
 
 var builder = WebApplication.CreateBuilder(args);
+var allowedOrigins = (Environment.GetEnvironmentVariable("VOICEBANKSTUDIO_ALLOWED_ORIGINS")
+    ?? "https://zulizhiren85-dev.github.io")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+builder.Services.AddCors(options => options.AddPolicy("voicebankstudio", policy =>
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
@@ -21,6 +26,7 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 270L * 1024 * 1024;
 });
 var app = builder.Build();
+app.UseCors("voicebankstudio");
 
 (string[] Found, string[] Missing, string? Error) InspectPhonemizers()
 {
