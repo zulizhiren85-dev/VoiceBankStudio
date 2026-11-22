@@ -89,4 +89,56 @@ async function loadFiles(files,mode){
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbFolder").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"folder");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbClear").addEventListener("click",()=>{state.entries.clear();state.files.clear();state.rows=[];state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
+
+const decodedCache=new Map();let synthContext=null,synthSources=[];
+function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
+function vowelOf(s){const t=String(s||"").trim().slice(-1);const groups={a:"あかがさざただなはばぱまやらわぁゃ",i:"いきぎしじちぢにひびぴみりゐぃ",u:"うくぐすずつづぬふぶぷむゆるぅゅ",e:"えけげせぜてでねへべぺめれゑぇ",o:"おこごそぞとどのほぼぽもよろをぉょ"};for(const [v,chars] of Object.entries(groups))if(chars.includes(t))return v;return "";}
+async function sampleBuffer(path){
+ if(decodedCache.has(path))return decodedCache.get(path);
+ let blob=state.files.get(path);if(!blob){const entry=state.entries.get(path);if(!entry)throw Error("原音WAVが見つかりません: "+path);blob=await zipFile(entry);}
+ const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error("このブラウザは音声合成に対応していません。");
+ synthContext=synthContext||new AC();if(synthContext.state==="suspended")await synthContext.resume();
+ const buffer=await synthContext.decodeAudioData(await blob.arrayBuffer());
+ decodedCache.set(path,buffer);
+ if(decodedCache.size>48)decodedCache.delete(decodedCache.keys().next().value);
+ return buffer;
+}
+function chooseRow(lyric,previous){
+ const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous);
+ const candidates=prev?[prev+" "+target,prev+target]:[];
+ for(const alias of candidates){const r=state.rows.find(x=>x.alias.normalize("NFC")===alias);if(r)return r;}
+ return state.rows.find(x=>x.alias.normalize("NFC")===target)||null;
+}
+async function playNotes(notes,options={}){
+ if(!state.rows.length)throw Error("先にUTAU音源を読み込んでください。");
+ if(!Array.isArray(notes)||!notes.length)throw Error("曲に音符がありません。");
+ const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error("音声再生に対応していません。");
+ synthContext=synthContext||new AC();await synthContext.resume();
+ synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];
+ const ordered=notes.slice().sort((a,b)=>Number(a.start)-Number(b.start)),plans=[],missing=[];let previous="";
+ for(const n of ordered){
+  const row=chooseRow(n.lyric,previous);previous=n.lyric;
+  if(!row||!row.valid){missing.push(String(n.lyric||"（空欄）"));continue;}
+  try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
+ }
+ if(missing.length)throw Error("対応する原音が見つからない音符があります: "+[...new Set(missing)].slice(0,8).join("、"));
+ if(!plans.length)throw Error("再生できる原音がありません。");
+ const bpm=Math.max(40,Math.min(240,Number(options.bpm)||120)),unit=60/bpm,volume=Math.max(0,Math.min(100,Number(options.volume??35)))/100*.65,now=synthContext.currentTime+.08;
+ for(const {n,row,buffer} of plans){
+  const hz=noteHz(n.pitch);if(!hz)continue;
+  const folderPitch=row.file.match(/(?:^|\/)([A-G](?:#|b)?-?\d)(?:\/|$)/i);
+  const root=folderPitch?noteHz(folderPitch[1]):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
+  const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
+  const noteStart=now+Math.max(0,Number(n.start)||0)*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
+  const targetDuration=Math.max(.08,(Number(n.beats)||1)*unit+pre),sourceDuration=Math.min(available,targetDuration*rate);
+  const source=synthContext.createBufferSource(),gain=synthContext.createGain();source.buffer=buffer;source.playbackRate.setValueAtTime(rate,startAt);
+  gain.gain.setValueAtTime(0,startAt);gain.gain.linearRampToValueAtTime(volume,Math.min(startAt+.025,startAt+targetDuration*.15));
+  gain.gain.setValueAtTime(volume,Math.max(startAt+.03,startAt+targetDuration*.72));gain.gain.linearRampToValueAtTime(0,startAt+Math.max(.04,sourceDuration/rate));
+  source.connect(gain).connect(synthContext.destination);source.start(startAt,offset,sourceDuration);synthSources.push(source);
+ }
+ return {scheduled:plans.length};
+}
+function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
+window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,playNotes,stop:stopSinging};
+
 })();
