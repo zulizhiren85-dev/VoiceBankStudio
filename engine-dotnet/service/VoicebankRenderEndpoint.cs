@@ -115,7 +115,7 @@ public static class VoicebankRenderEndpoint
             if (bank.SingerType != OpenUtau.Core.Ustx.USingerType.Classic)
                 return Results.BadRequest(new { error = "現在のベータ版は通常のUTAU音源（Classic）に対応しています。ENUNU / DiffSinger等は対象外です。" });
 
-            logger.LogInformation("Voicebank metadata loaded. Loading singer samples. OtoCount={OtoCount}", bank.Oto.Count);
+            logger.LogInformation("Voicebank metadata loaded. SingerType={SingerType}. Loading singer samples.", bank.SingerType);
             using var singer = new ClassicSinger(bank);
             singer.EnsureLoaded();
             logger.LogInformation("Singer sample loading finished. Loaded={Loaded}, OtoCount={OtoCount}, ErrorCount={ErrorCount}", singer.Loaded, singer.Otos.Count, singer.Errors.Count);
