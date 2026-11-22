@@ -113,13 +113,18 @@ jobs:
 
       - name: Render a real WAV through OpenUtau Worldline-R
         run: |
-          curl --fail --silent --show-error \
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
             -F "archive=@/tmp/vbs-testbank.zip" \
             --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
             -F "bpm=120" \
             -F "phonemizer=ja-vcv" \
             http://127.0.0.1:5088/api/v1/render \
-            --output /tmp/vbs-render.wav
+            --output /tmp/vbs-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-render-response.bin
+            exit 1
+          fi
+          mv /tmp/vbs-render-response.bin /tmp/vbs-render.wav
           python3 - <<'PY'
           import os, struct
           path = "/tmp/vbs-render.wav"
