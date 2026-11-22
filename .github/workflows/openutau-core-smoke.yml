@@ -35,7 +35,7 @@ jobs:
 
       - name: Build HTTP engine service
         run: |
-          dotnet build engine-dotnet/VoiceBankStudio.Service.csproj \
+          dotnet build engine-dotnet/service/VoiceBankStudio.Service.csproj \
             --configuration Release \
             -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
 
