@@ -38,7 +38,7 @@ jobs:
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
           js = Path("voicebank.js").read_text(encoding="utf-8")
-          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=vcb-20261122-03\"", "id=\"voicePlay\"", "id=\"analysisToSong\"", "端末内で簡易解析（通信なし）", "Peak：", "pitchFrames", "count=Math.min(240", "multiple", "id=\"serverAnalyzeBatch\"", "function refreshBatchPicker", "uploadAudioFile(f,false,resolve)"]
+          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=vcb-20261122-04\"", "id=\"voicePlay\"", "id=\"analysisToSong\"", "端末内で簡易解析（通信なし）", "Peak：", "pitchFrames", "count=Math.min(240", "multiple", "id=\"serverAnalyzeBatch\"", "function refreshBatchPicker", "uploadAudioFile(f,false,resolve)"]
           required_js = ["oto.ini", "preutterance", "overlap", "DecompressionStream", "webkitRelativePath", "playNotes", "VoiceBankStudioVoicebank", "function aliasKey", "function chooseRow", "row.overlap", "row.preutterance", "\"* \"+target", "\"- \"+target", "\"ん\""]
           missing = [item for item in required_html if item not in html] + [item for item in required_js if item not in js]
           if missing:
