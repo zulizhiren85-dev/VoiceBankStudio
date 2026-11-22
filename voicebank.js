@@ -179,13 +179,15 @@ async function playNotes(notes,options={}){
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error("音声再生に対応していません。");
  synthContext=synthContext||new AC();await synthContext.resume();
  synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];
+ const octave=Math.max(-2,Math.min(2,Number(options.octave)||0));
+ const transposePitch=p=>{const midi=pitchNumber(p);if(midi===null)return p;const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],value=midi+octave*12;return names[((value%12)+12)%12]+(Math.floor(value/12)-1);};
  const ordered=notes.slice().sort((a,b)=>Number(a.start)-Number(b.start)),plans=[],missing=[];let previous="",previousEnd=-Infinity;
  for(const n of ordered){
   const start=Math.max(0,Number(n.start)||0),beats=Math.max(.05,Number(n.beats)||1);
-  const first=start-previousEnd>.05,row=chooseRow(n.lyric,first?"":previous,first,n.pitch);
+  const first=start-previousEnd>.05,playPitch=transposePitch(n.pitch),row=chooseRow(n.lyric,first?"":previous,first,playPitch);
   previous=n.lyric;previousEnd=start+beats;
   if(!row||!row.valid){missing.push(String(n.lyric||"（空欄）"));continue;}
-  try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer,start,beats});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
+  try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer,start,beats,playPitch});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
  }
  if(missing.length)throw Error("対応する原音が見つからない音符があります: "+[...new Set(missing)].slice(0,8).join("、"));
  if(!plans.length)throw Error("再生できる原音がありません。");
@@ -194,7 +196,7 @@ async function playNotes(notes,options={}){
  if(invalidPitch.length)throw Error("音程の形式を確認してください: "+[...new Set(invalidPitch)].slice(0,8).join("、")+"。例：C4 / D#4 / F#3");
  if(!plans.length)throw Error("再生できる原音がありません。歌詞とoto.iniのエイリアスを確認してください。");
  for(let i=0;i<plans.length;i++){
-  const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);
+  const {n,row,buffer,start,beats,playPitch}=plans[i],next=plans[i+1],hz=noteHz(playPitch);
   const folderPitch=row.file.split("/").find(part=>/^[A-G](?:#|b)?-?\d$/i.test(part));
   const root=folderPitch?noteHz(folderPitch):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
