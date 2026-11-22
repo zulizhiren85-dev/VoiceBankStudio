@@ -32,6 +32,22 @@ jobs:
           Path("/tmp/voicebankstudio-inline.js").write_text(html[start:end], encoding="utf-8")
           PY
           node --check /tmp/voicebankstudio-inline.js
+      - name: Test automatic VCV and CVVC detection
+        run: |
+          node <<'JS'
+          const fs = require("node:fs");
+          const vm = require("node:vm");
+          const assert = require("node:assert/strict");
+          const html = fs.readFileSync("index.html", "utf8");
+          const start = html.indexOf("function detectLocalPhonemizer");
+          const end = html.indexOf("\n}", start) + 2;
+          if (start < 0 || end < 2) throw new Error("detectLocalPhonemizer was not found");
+          const detect = vm.runInNewContext(html.slice(start, end) + "; detectLocalPhonemizer");
+          assert.equal(detect(["あ", "a か"]).mode, "ja-vcv");
+          assert.equal(detect(["あ", "a k"]).mode, "ja-cvvc");
+          assert.equal(detect(["あ", "か"]).mode, "ja-vcv");
+          console.log("Automatic VCV/CVVC detection tests passed.");
+          JS
       - name: Check required beta UI hooks
         run: |
           python - <<'PY'
