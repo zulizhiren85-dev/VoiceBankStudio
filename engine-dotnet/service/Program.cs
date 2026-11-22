@@ -1,5 +1,6 @@
 using System.Reflection;
 using OpenUtau.Api;
+using VoiceBankStudio.Engine;
 
 const string serviceName = "VoiceBankStudio.Engine";
 const string openUtauRevision = "08222cb7c48c4ab47faa34a6efc34e2c00898a1e";
@@ -10,6 +11,10 @@ string[] requiredPhonemizers =
 };
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
+});
 var app = builder.Build();
 
 (string[] Found, string[] Missing, string? Error) InspectPhonemizers()
@@ -52,6 +57,9 @@ app.MapGet("/", () => Results.Ok(new
     health = "/health",
     engineStatus = "/api/v1/engine/status",
 }));
+
+app.MapPost("/api/v1/voicebanks/inspect", VoicebankArchiveInspector.InspectAsync)
+    .DisableAntiforgery();
 
 app.MapGet("/health", () => Results.Ok(new
 {
