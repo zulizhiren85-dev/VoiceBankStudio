@@ -87,7 +87,7 @@ app.MapGet("/api/v1/engine/status", () =>
             available = inspection.Found,
             missing = inspection.Missing,
         },
-        singerLoadingReady = false,
+        voicebankInspectionAvailable = true,
         renderingReady = false,
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
         note = "This endpoint verifies Core/Builtin assembly loading only. It does not load a voicebank or render audio.",
