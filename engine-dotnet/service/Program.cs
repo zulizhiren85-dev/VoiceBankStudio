@@ -99,9 +99,13 @@ app.MapGet("/api/v1/engine/status", () =>
         voicebankInspectionAvailable = true,
         renderingApiAvailable = true,
         singleNoteRenderVerified = true,
-        renderingReady = false,
+        multiPhraseVcvRenderVerified = true,
+        cvvcRenderVerified = true,
+        realVoicebankVerified = false,
+        renderingReady = true,
+        outputFormat = "WAV PCM16 mono 44100 Hz",
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
-        note = "This status endpoint reports assembly and phonemizer availability. Use /api/v1/voicebanks/inspect to inspect a ZIP voicebank and /api/v1/render to render WAV audio.",
+        note = "The Linux CI pipeline has rendered non-silent single-note, multi-phrase VCV, and two-note CVVC WAV files from a synthetic voicebank. Real-world voicebank quality and iPad playback still need user-bank validation.",
         error = inspection.Error,
     });
 });
