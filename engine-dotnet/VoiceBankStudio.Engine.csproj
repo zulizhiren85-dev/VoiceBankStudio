@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="service/**/*.cs" />
     <ProjectReference Include="$(OpenUtauSourcePath)/OpenUtau.Plugin.Builtin/OpenUtau.Plugin.Builtin.csproj" />
   </ItemGroup>
 </Project>
