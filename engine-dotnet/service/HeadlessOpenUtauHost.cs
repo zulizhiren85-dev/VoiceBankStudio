@@ -136,36 +136,60 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         try
         {
             var deadline = DateTime.UtcNow.AddSeconds(30);
-            RenderPhrase? phrase = null;
+            RenderPhrase[] phrases = Array.Empty<RenderPhrase>();
             while (DateTime.UtcNow < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var readyState = await OnEngineThread(() =>
-                    (state.part.PhonemesUpToDate, state.part.renderPhrases.FirstOrDefault()));
-                if (readyState.Item1 && readyState.Item2 is not null)
+                    (state.part.PhonemesUpToDate, state.part.renderPhrases.ToArray()));
+                if (readyState.Item1 && readyState.Item2.Length > 0)
                 {
-                    phrase = readyState.Item2;
+                    phrases = readyState.Item2;
                     break;
                 }
                 await Task.Delay(50, cancellationToken);
             }
 
-            if (phrase is null)
+            if (phrases.Length == 0)
                 throw new InvalidOperationException("OpenUtauの音素変換またはフレーズ生成が30秒以内に完了しませんでした。");
 
             var renderer = new WorldlineRenderer(version: 10);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var result = await renderer.Render(
-                phrase,
-                new Progress(Math.Max(1, phrase.phones.Length)),
-                trackNo: 0,
-                cancellation: renderCancellation,
-                isPreRender: false);
+            var renderedPhrases = new List<(int Start, float[] Samples)>();
+            int totalSamples = 0;
+            foreach (var phrase in phrases)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = await renderer.Render(
+                    phrase,
+                    new Progress(Math.Max(1, phrase.phones.Length)),
+                    trackNo: 0,
+                    cancellation: renderCancellation,
+                    isPreRender: false);
 
-            if (result.samples is null || result.samples.Length == 0)
-                throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
+                if (result.samples is null || result.samples.Length == 0)
+                    throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
 
-            return result.samples;
+                int start = (int)Math.Round((result.positionMs - result.leadingMs) * 44100 / 1000.0);
+                int sourceOffset = Math.Max(0, -start);
+                int destinationStart = Math.Max(0, start);
+                int available = result.samples.Length - sourceOffset;
+                if (available <= 0)
+                    continue;
+                renderedPhrases.Add((destinationStart, result.samples.Skip(sourceOffset).ToArray()));
+                totalSamples = Math.Max(totalSamples, destinationStart + available);
+            }
+
+            if (totalSamples == 0)
+                throw new InvalidOperationException("OpenUtauレンダラーから有効な音声データが返りませんでした。");
+
+            var mixed = new float[totalSamples];
+            foreach (var rendered in renderedPhrases)
+            {
+                for (int i = 0; i < rendered.Samples.Length; i++)
+                    mixed[rendered.Start + i] += rendered.Samples[i];
+            }
+            return mixed;
         }
         finally
         {
