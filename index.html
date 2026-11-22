@@ -20,7 +20,7 @@
 <label>オクターブ<select id="octave"><option value="-2">−2（2オクターブ下）</option><option value="-1">−1（1オクターブ下）</option><option value="0" selected>±0（標準）</option><option value="1">＋1（1オクターブ上）</option><option value="2">＋2（2オクターブ上）</option></select></label>
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
@@ -61,7 +61,7 @@ const twinkleLines=[
 const seed=twinkleLines.flatMap((line,lineIndex)=>line.map(([pitch,lyric],i)=>[pitch,lyric,(i===6?2:1),lineIndex*8+i]));
 let notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]})),nextId=43,ctx=null,active=[],decoded=null,objectURL=null,lastAnalysisFrames=[],lastAnalysisTempo=null;
 let renderedAudio=null,renderedAudioUrl=null;
-function invalidateRenderedAudio(){if(renderedAudio){renderedAudio.pause();renderedAudio.removeAttribute('src');renderedAudio.load();renderedAudio=null;}if(renderedAudioUrl){URL.revokeObjectURL(renderedAudioUrl);renderedAudioUrl=null;}$('downloadRender').disabled=true;}
+function invalidateRenderedAudio(){if(renderedAudio){renderedAudio.pause();renderedAudio.removeAttribute('src');renderedAudio.load();renderedAudio=null;}if(renderedAudioUrl){URL.revokeObjectURL(renderedAudioUrl);renderedAudioUrl=null;}$('downloadRender').disabled=true;$('playRender').disabled=true;}
 function render(){invalidateRenderedAudio();const root=$('notes');root.innerHTML='';notes.sort((a,b)=>a.start-b.start).forEach(n=>{const row=document.createElement('div');row.className='note';[['pitch',n.pitch,'text'],['lyric',n.lyric,'text'],['beats',n.beats,'number'],['start',n.start,'number']].forEach(([key,val,type])=>{const inp=document.createElement('input');inp.type=type;inp.value=val;inp.setAttribute('aria-label',key);if(key==='beats'){inp.min='.25';inp.max='8';inp.step='.25'}if(key==='start'){inp.min='0';inp.step='.25'}inp.addEventListener('change',()=>{const previous=n[key],next=type==='number'?Number(inp.value):inp.value;if(type==='number'&&!Number.isFinite(next)){inp.value=previous;return;}if(key==='beats'&&(next<.25||next>8)){inp.value=previous;return;}if(key==='start'&&next<0){inp.value=previous;return;}n[key]=next;invalidateRenderedAudio();if(key==='pitch')inp.value=n.pitch;});row.append(inp)});const del=document.createElement('button');del.textContent='×';del.title='この音符を削除';del.onclick=()=>{notes=notes.filter(x=>x.id!==n.id);render()};row.append(del);root.append(row)})}
 render();
 $('add').onclick=()=>{notes.push({id:nextId++,pitch:'C4',lyric:'あ',beats:1,start:notes.length?Math.max(...notes.map(n=>n.start+n.beats)):0});render()};
@@ -255,7 +255,7 @@ $('inspectVoicebank').addEventListener('click',async()=>{
  finally{btn.disabled=false;}
 });
 ['bpm','octave','phonemizer'].forEach(id=>$(id).addEventListener('change',invalidateRenderedAudio));
-$('downloadRender').onclick=()=>{
+$('playRender').onclick=async()=>{\n if(!renderedAudio)return;\n try{await renderedAudio.play();const message='生成した歌声を再生中です…';$('voicePlayStatus').textContent=message;$('msg').textContent=message;}\n catch(err){const message='再生できませんでした：'+(err&&err.message?err.message:String(err));$('voicePlayStatus').textContent=message;$('msg').textContent=message;}\n};\n$('downloadRender').onclick=()=>{
  if(!renderedAudioUrl)return;
  const link=document.createElement('a');link.href=renderedAudioUrl;link.download='VoiceBankStudio-render.wav';
  document.body.append(link);link.click();link.remove();
@@ -320,11 +320,12 @@ $('voicePlay').addEventListener('click',async()=>{
   if(renderedAudioUrl)URL.revokeObjectURL(renderedAudioUrl);
   renderedAudioUrl=URL.createObjectURL(blob);
   $('downloadRender').disabled=false;
+  $('playRender').disabled=false;
   renderedAudio=new Audio(renderedAudioUrl);
+  renderedAudio.preload='auto';
   renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
-  report('OpenUtauで歌声を生成しました。再生しています…');
-  await renderedAudio.play();
-  renderedAudio.onended=()=>report('歌唱が完了しました。WAV生成済みです。');
+  renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
+  report('歌声の生成が完了しました。iPadのSafariでは自動再生が制限されるため、「生成した歌声を再生」を押してください。');
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
