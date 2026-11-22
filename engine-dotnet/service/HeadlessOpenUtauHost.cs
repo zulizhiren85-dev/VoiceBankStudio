@@ -133,42 +133,48 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             return (project, part);
         });
 
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        RenderPhrase? phrase = null;
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var readyState = await OnEngineThread(() =>
-                (state.part.PhonemesUpToDate, state.part.renderPhrases.FirstOrDefault()));
-            if (readyState.Item1 && readyState.Item2 is not null)
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            RenderPhrase? phrase = null;
+            while (DateTime.UtcNow < deadline)
             {
-                phrase = readyState.Item2;
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                var readyState = await OnEngineThread(() =>
+                    (state.part.PhonemesUpToDate, state.part.renderPhrases.FirstOrDefault()));
+                if (readyState.Item1 && readyState.Item2 is not null)
+                {
+                    phrase = readyState.Item2;
+                    break;
+                }
+                await Task.Delay(50, cancellationToken);
             }
-            await Task.Delay(50, cancellationToken);
+
+            if (phrase is null)
+                throw new InvalidOperationException("OpenUtauの音素変換またはフレーズ生成が30秒以内に完了しませんでした。");
+
+            var renderer = new WorldlineRenderer(version: 10);
+            using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var result = await renderer.Render(
+                phrase,
+                new Progress(Math.Max(1, phrase.phones.Length)),
+                trackNo: 0,
+                cancellation: renderCancellation,
+                isPreRender: false);
+
+            if (result.samples is null || result.samples.Length == 0)
+                throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
+
+            return result.samples;
         }
-
-        if (phrase is null)
-            throw new InvalidOperationException("OpenUtauの音素変換またはフレーズ生成が30秒以内に完了しませんでした。");
-
-        var renderer = new WorldlineRenderer(version: 10);
-        using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var result = await renderer.Render(
-            phrase,
-            new Progress(Math.Max(1, phrase.phones.Length)),
-            trackNo: 0,
-            cancellation: renderCancellation,
-            isPreRender: false);
-
-        if (result.samples is null || result.samples.Length == 0)
-            throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
-
-        await OnEngineThread(() =>
+        finally
         {
-            DocManager.Inst.ExecuteCmd(new LoadProjectNotification(new UProject()));
-            return true;
-        });
-        return result.samples;
+            await OnEngineThread(() =>
+            {
+                DocManager.Inst.ExecuteCmd(new LoadProjectNotification(new UProject()));
+                return true;
+            });
+        }
     }
 
     public void Dispose()
