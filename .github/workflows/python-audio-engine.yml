@@ -27,6 +27,8 @@ jobs:
           python -m pip install -r server/requirements.txt
       - name: Check API imports
         run: python -c "import server.main"
-      - name: Run tests
+      - name: Run audio engine tests
         working-directory: engine
         run: python -m unittest discover -s tests -v
+      - name: Run server conversion tests
+        run: python -m unittest discover -s server/tests -v
