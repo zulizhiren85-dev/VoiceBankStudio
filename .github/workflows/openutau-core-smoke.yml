@@ -69,7 +69,9 @@ jobs:
               f.write("name=VoiceBankStudio CI Fixture\n")
           with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
               f.write("a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\na.wav=a k,0,100,0,0,0\na.wav=か,0,100,0,0,0\na.wav=- か,0,100,0,0,0\na.wav=low_あ,0,100,0,0,0\na.wav=high_あ,0,100,0,0,0\n")
-          with open(os.path.join(root, "prefix.map"), "w", encoding="ascii") as f:\n              f.write("C4\\tlow_\\t\\nC5\\thigh_\\t\\n")\n          with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
+          with open(os.path.join(root, "prefix.map"), "w", encoding="ascii") as f:
+              f.write("C4\tlow_\t\nC5\thigh_\t\n")
+          with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
               wav.setnchannels(1)
               wav.setsampwidth(2)
               wav.setframerate(22050)
