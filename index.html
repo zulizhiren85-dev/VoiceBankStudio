@@ -66,7 +66,7 @@ $('add').onclick=()=>{notes.push({id:nextId++,pitch:'C4',lyric:'あ',beats:1,sta
 function freq(p){const m=p.trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return null;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='B'?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12)}
 function octaveRatio(){return Math.pow(2,Math.max(-2,Math.min(2,Number($('octave')?.value)||0)))}
 function stop(){active.forEach(o=>{try{o.stop()}catch(e){}});active=[]}
-$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();if(renderedAudio){renderedAudio.pause();renderedAudio.currentTime=0;} };
+$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();if(renderedAudio){renderedAudio.pause();renderedAudio.currentTime=0;}if(renderedAudioUrl){URL.revokeObjectURL(renderedAudioUrl);renderedAudioUrl=null;} };
 $('play').onclick=async()=>{stop();const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext){$('msg').textContent='このブラウザは音声再生に対応していません。';return}ctx=ctx||new AudioContext();await ctx.resume();const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120)),unit=60/bpm,vol=Math.max(0,Math.min(100,Number($('volume').value)||35))/100*.18,now=ctx.currentTime+.08;notes.forEach(n=>{const f=freq(n.pitch);if(!f)return;const osc=ctx.createOscillator(),gain=ctx.createGain(),start=now+Math.max(0,n.start)*unit,dur=Math.max(.08,n.beats*unit);osc.type='triangle';osc.frequency.value=f*octaveRatio();gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(vol,start+.015);gain.gain.setValueAtTime(vol,start+dur*.82);gain.gain.linearRampToValueAtTime(0,start+dur);osc.connect(gain).connect(ctx.destination);osc.start(start);osc.stop(start+dur+.02);active.push(osc)});$('msg').textContent='テスト再生中です。'};
 $('reset').onclick=()=>{notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]}));nextId=43;$('bpm').value=110;$('meter').value='4/4';render();$('msg').textContent='テスト曲に戻しました。'};
 $('sourceService').value='youtube';
@@ -238,7 +238,7 @@ $('voicePlay').addEventListener('click',async()=>{
   const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120));
   const octave=Number($('octave').value)||0;
   const midiFromPitch=p=>{const hz=freq(p);return hz>0?Math.round(69+12*Math.log2(hz/440))+octave*12:null;};
-  const songNotes=notes.map(n=>({lyric:String(n.lyric||'').trim(),tone:midiFromPitch(n.pitch),position:Math.round(Math.max(0,Number(n.start)||0)*480),duration:Math.round(Math.max(.05,Number(n.beats)||1)*480)}));
+  const songNotes=notes.map(n=>({lyric:String(n.lyric||'').trim(),tone:midiFromPitch(n.pitch),position:Math.round(Math.max(0,Number(n.start)||0)*480),duration:Math.round(Math.max(.0625,Number(n.beats)||1)*480)}));
   if(songNotes.some(n=>!n.lyric||n.tone===null))throw Error('歌詞または音程を確認してください。');
   const form=new FormData();
   form.append('archive',archive,archive.name||'voicebank.zip');
@@ -265,4 +265,4 @@ $('voicePlay').addEventListener('click',async()=>{
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=vcb-20261122-05" defer></script></body></html>
+</script><script src="voicebank.js?v=20261122-openutau1" defer></script></body></html>
