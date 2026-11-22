@@ -151,4 +151,4 @@ Preserve required copyright and license notices. Confirm whether each component 
 
 ## Current status
 
-Architecture planning and source inspection only. No replacement editor or OpenUtau renderer has been integrated yet. The first implementation milestone is USTX/voicebank/oto loading and a minimal server-side single-phrase render—not a full browser port or a WASM renderer.
+The feature branch now contains a separate .NET 10 HTTP service referencing the pinned OpenUtau Core/Builtin source, health/engine-status endpoints, and a ZIP voicebank inspection endpoint. The inspection path uses OpenUtau's `VoicebankLoader` and `ClassicSinger`, then invokes the built-in Japanese VCV phonemizer against a test note. GitHub Actions is configured to build the service, exercise the endpoints with a synthetic CP932 voicebank, and reject ZIP path traversal. This does not yet produce audio; the next milestone remains a verified single-note WAV render through OpenUtau's own rendering pipeline. The existing browser editor and public Pages deployment have not been replaced.
