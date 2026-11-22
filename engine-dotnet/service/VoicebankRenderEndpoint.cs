@@ -18,17 +18,27 @@ public static class VoicebankRenderEndpoint
     };
 
     public static async Task<IResult> RenderAsync(
-        [FromForm] IFormFile archive,
+        [FromForm] IFormFile? archive,
+        [FromForm] string? archiveId,
         [FromForm] string notesJson,
         [FromForm] double bpm,
         [FromForm] string? phonemizer,
         [FromServices] HeadlessOpenUtauHost host,
         CancellationToken cancellationToken)
     {
-        if (archive is null || archive.Length == 0)
-            return Results.BadRequest(new { error = "UTAU音源ZIPを選択してください。" });
-        if (archive.Length > MaxArchiveBytes)
-            return Results.BadRequest(new { error = "ZIPファイルは800MB以下にしてください。" });
+        string? cachedArchivePath = null;
+        if (archive is null)
+        {
+            if (!VoicebankArchiveCache.TryGetPath(archiveId, out cachedArchivePath))
+                return Results.NotFound(new { error = "音源の一時登録が期限切れです。音源をもう一度登録してください。" });
+        }
+        else
+        {
+            if (archive.Length == 0)
+                return Results.BadRequest(new { error = "UTAU音源ZIPを選択してください。" });
+            if (archive.Length > MaxArchiveBytes)
+                return Results.BadRequest(new { error = "ZIPファイルは800MB以下にしてください。" });
+        }
         if (!string.IsNullOrWhiteSpace(phonemizer) && phonemizer != "ja-vcv" && phonemizer != "ja-cvvc")
             return Results.BadRequest(new { error = "対応する発音方式は ja-vcv / ja-cvvc です。" });
         if (!await EngineWorkGate.Gate.WaitAsync(0))
@@ -45,7 +55,9 @@ public static class VoicebankRenderEndpoint
             int entries = 0;
             var seen = new HashSet<string>(StringComparer.Ordinal);
 
-            await using (var input = archive.OpenReadStream())
+            await using (var input = archive is not null
+                ? archive.OpenReadStream()
+                : new FileStream(cachedArchivePath!, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, useAsync: true))
             using (var zip = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: false, entryNameEncoding: encoding))
             {
                 foreach (var entry in zip.Entries)
