@@ -198,11 +198,13 @@ async function playNotes(notes,options={}){
   const folderPitch=row.file.split("/").find(part=>/^[A-G](?:#|b)?-?\d$/i.test(part));
   const root=folderPitch?noteHz(folderPitch):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
-  const noteStart=now+start*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
+  // Beta playback is monophonic: do not let preutterance/overlap start the next
+  // pitch early or extend the previous pitch into it. Full UTAU VCV crossfading
+  // needs a resampler/phonemizer and otherwise sounds like simultaneous singers.
+  const noteStart=now+start*unit,startAt=noteStart;
   const nominalEnd=noteStart+beats*unit,nextStart=next?now+next.start*unit:nominalEnd;
-  const connected=!!next&&next.start<=start+beats+.02,overlap=connected?Math.max(0,next.row.overlap/1000):0;
-  const endAt=connected?Math.min(nominalEnd+overlap,nextStart+overlap):nominalEnd;
-  const targetDuration=Math.max(.08,endAt-startAt),sourceDuration=Math.min(available,targetDuration*rate);
+  const endAt=next?Math.min(nominalEnd,nextStart):nominalEnd;
+  const targetDuration=Math.max(.02,endAt-startAt),sourceDuration=Math.min(available,targetDuration*rate);
   const actualEnd=startAt+sourceDuration/rate,fadeIn=Math.min(.025,targetDuration*.12),fadeOut=Math.min(.045,targetDuration*.2);
   const source=synthContext.createBufferSource(),gain=synthContext.createGain();source.buffer=buffer;source.playbackRate.setValueAtTime(rate,startAt);
   gain.gain.setValueAtTime(0,startAt);gain.gain.linearRampToValueAtTime(volume,startAt+fadeIn);
