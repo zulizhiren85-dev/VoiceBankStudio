@@ -227,31 +227,26 @@ function importAnalysisToSong(){
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
 const OPENUTAU_ENGINE_API = "https://voicebankstudio-openutau-engine-539e.onrender.com";
 let inspectedArchive=null;
+function detectLocalPhonemizer(aliases){
+ const normalized=aliases.map(a=>String(a||'').normalize('NFC').trim());
+ const vcv=normalized.filter(a=>/^[aiueoぁ-ゖァ-ヺ]\\s+[ぁ-ゖァ-ヺ]/i.test(a)).length;
+ const cvvc=normalized.filter(a=>/^[aiueo]\\s+[bcdfghjklmnpqrstvwxyz]$/i.test(a)).length;
+ if(vcv>0)return {mode:'ja-vcv',reason:'VCV連結エイリアス '+vcv+'件'};
+ if(cvvc>0)return {mode:'ja-cvvc',reason:'母音＋子音のVCエイリアス '+cvvc+'件'};
+ return {mode:'ja-vcv',reason:'VCV/CVVCの特徴を十分に検出できないため、CVフォールバック付きVCVを初期選択'};
+}
 async function inspectLoadedVoicebank(){
  const status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
  if(!api||!api.isReady())throw Error('先に⑤からUTAU音源を読み込んでください。');
  const archive=api.getArchiveFile();
- if(!archive)throw Error('OpenUtauで確認するには音源ZIPを読み込んでください。フォルダ読み込みはローカル試聴用です。');
+ if(!archive)throw Error('OpenUtau歌唱には音源ZIPが必要です。フォルダ読み込みは端末内の原音試聴用です。');
  if(inspectedArchive===archive&&window.voiceBankDetectedPhonemizer)return window.voiceBankDetectedPhonemizer;
- status.textContent='音源のoto.iniとエイリアスをOpenUtauで調べ、発音方式を自動判定しています…';
- const form=new FormData();form.append('archive',archive,archive.name||'voicebank.zip');
- const response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/voicebanks/inspect',{method:'POST',body:form});
- let result={};try{result=await response.json();}catch(_){}
- if(!response.ok)throw Error(result.detail||result.error||('HTTP '+response.status));
- const aliases=(result.aliases||[]).map(x=>String(x.alias||'').trim());
- const declared=String(result.defaultPhonemizer||'').toLowerCase();
- const vcvScore=aliases.filter(a=>/^[a-zぁ-ゖァ-ヺ]+\s+[ぁ-ゖァ-ヺ]/i.test(a)).length;
- const cvvcScore=aliases.filter(a=>/^[ぁ-ゖァ-ヺ]+\s+[bcdfghjklmnpqrstvwxyz]/i.test(a)||/^[aeiou]\s+[bcdfghjklmnpqrstvwxyz]$/i.test(a)).length;
- let mode;
- if(declared.includes('cvvc'))mode='ja-cvvc';
- else if(declared.includes('vcv'))mode='ja-vcv';
- else if(cvvcScore>vcvScore)mode='ja-cvvc';
- else mode='ja-vcv';
- $('phonemizer').value=mode;inspectedArchive=archive;window.voiceBankDetectedPhonemizer=mode;
- const prefix=result.prefixMapTests||{},tests=result.phonemizerTests||{};
- const errors=(result.errors||[]).slice(0,5).join(' / ');
- status.textContent='OpenUtau音源チェック完了・発音方式を自動設定しました\n音源: '+(result.name||'名前不明')+'\n自動選択: '+(mode==='ja-cvvc'?'日本語 CVVC':'日本語 VCV / CV')+'\n判定根拠: '+(result.defaultPhonemizer||('エイリアス構成（VCV '+vcvScore+' / CVVC '+cvvcScore+'）'))+'\noto.ini: '+(result.otoCount||0)+'件\nVCV: '+(tests.vcv||[]).join(' → ')+'\nCV: '+(tests.cv||[]).join(' → ')+'\nCVVC: '+(tests.cvvc||[]).join(' → ')+'\n音階マップ: C4='+(prefix.c4||'未検出')+' / C5='+(prefix.c5||'未検出')+(errors?'\n警告: '+errors:'');
- return mode;
+ status.textContent='端末内のoto.iniエイリアスを調べ、発音方式を自動判定しています…';
+ const detected=detectLocalPhonemizer(api.getAliases?api.getAliases():[]);
+ $('phonemizer').value=detected.mode;
+ inspectedArchive=archive;window.voiceBankDetectedPhonemizer=detected.mode;
+ status.textContent='音源チェック完了・発音方式を自動設定しました\\n自動選択: '+(detected.mode==='ja-cvvc'?'日本語 CVVC':'日本語 VCV / CV')+'\\n判定根拠: '+detected.reason+'\\noto.iniのエイリアス '+(api.getAliases?api.getAliases().length:0)+'件を端末内で解析しました。音源ZIPはチェックのためにサーバーへ送信していません。';
+ return detected.mode;
 }
 $('inspectVoicebank').addEventListener('click',async()=>{
  const btn=$('inspectVoicebank');btn.disabled=true;
