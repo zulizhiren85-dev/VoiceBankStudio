@@ -32,6 +32,13 @@ jobs:
           git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
           test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
 
+
+      - name: Build HTTP engine service
+        run: |
+          dotnet build engine-dotnet/VoiceBankStudio.Service.csproj \
+            --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
