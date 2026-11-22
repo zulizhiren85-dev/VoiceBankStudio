@@ -1,6 +1,9 @@
 using System.IO.Compression;
 using System.Text;
+using OpenUtau.Api;
 using OpenUtau.Classic;
+using OpenUtau.Core.Ustx;
+using OpenUtau.Plugin.Builtin;
 
 namespace VoiceBankStudio.Engine;
 
@@ -82,6 +85,22 @@ public static class VoicebankArchiveInspector
             using var singer = new ClassicSinger(bank);
             singer.EnsureLoaded();
 
+            var project = new UProject();
+            var note = new Phonemizer.Note
+            {
+                lyric = "あ",
+                tone = 60,
+                position = 0,
+                duration = 480,
+                phonemeAttributes = Array.Empty<Phonemizer.PhonemeAttributes>(),
+            };
+            var vcv = new JapaneseVCVPhonemizer();
+            vcv.SetSinger(singer);
+            vcv.SetUp(new[] { new[] { note } }, project, project.tracks[0]);
+            vcv.SetTiming(project.timeAxis);
+            var phonemized = vcv.Process(
+                new[] { note }, null, null, null, null, Array.Empty<Phonemizer.Note>());
+
             return Results.Ok(new
             {
                 loaded = singer.Otos.Count > 0,
@@ -89,6 +108,7 @@ public static class VoicebankArchiveInspector
                 singer.Id,
                 singer.SingerType,
                 otoCount = singer.Otos.Count,
+                vcvPhonemesForTestNote = phonemized.phonemes.Select(phoneme => phoneme.phoneme),
                 aliases = singer.Otos.Take(30).Select(oto => new
                 {
                     alias = oto.Alias,
@@ -101,7 +121,7 @@ public static class VoicebankArchiveInspector
                 }),
                 errors = singer.Errors,
                 extractedBytes = expandedBytes,
-                note = "OpenUtau VoicebankLoader / ClassicSingerによる音源読み込み確認です。歌唱レンダリングはまだ行っていません。",
+                note = "OpenUtau VoicebankLoader / ClassicSingerによる音源読み込み確認です。VCV音素変換まで確認しています。歌唱レンダリングはまだ行っていません。",
             });
         }
         catch (InvalidDataException ex)
