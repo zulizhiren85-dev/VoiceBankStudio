@@ -152,8 +152,11 @@ async function playNotes(notes,options={}){
  if(missing.length)throw Error("対応する原音が見つからない音符があります: "+[...new Set(missing)].slice(0,8).join("、"));
  if(!plans.length)throw Error("再生できる原音がありません。");
  const bpm=Math.max(40,Math.min(240,Number(options.bpm)||120)),unit=60/bpm,volume=Math.max(0,Math.min(100,Number(options.volume??35)))/100*.65,now=synthContext.currentTime+.08;
+ const invalidPitch=plans.filter(p=>!noteHz(p.n.pitch)).map(p=>String(p.n.pitch||"（空欄）"));
+ if(invalidPitch.length)throw Error("音程の形式を確認してください: "+[...new Set(invalidPitch)].slice(0,8).join("、")+"。例：C4 / D#4 / F#3");
+ if(!plans.length)throw Error("再生できる原音がありません。歌詞とoto.iniのエイリアスを確認してください。");
  for(let i=0;i<plans.length;i++){
-  const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);if(!hz)continue;
+  const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);
   const folderPitch=row.file.split("/").find(part=>/^[A-G](?:#|b)?-?\d$/i.test(part));
   const root=folderPitch?noteHz(folderPitch):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
@@ -168,7 +171,7 @@ async function playNotes(notes,options={}){
   gain.gain.setValueAtTime(volume,Math.max(startAt+fadeIn,actualEnd-fadeOut));gain.gain.linearRampToValueAtTime(0,actualEnd);
   source.connect(gain).connect(synthContext.destination);source.start(startAt,offset,sourceDuration);synthSources.push(source);
  }
- return {scheduled:plans.length};
+ return {scheduled:plans.length,aliases:plans.map(p=>p.row.alias)};
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
 window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,playNotes,stop:stopSinging};
