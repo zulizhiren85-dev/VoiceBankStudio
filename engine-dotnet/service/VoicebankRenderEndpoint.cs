@@ -8,7 +8,7 @@ namespace VoiceBankStudio.Engine;
 
 public static class VoicebankRenderEndpoint
 {
-    private const long MaxArchiveBytes = 256L * 1024 * 1024;
+    private const long MaxArchiveBytes = 800L * 1024 * 1024;
     private const long MaxExpandedBytes = 1024L * 1024 * 1024;
     private const int MaxEntries = 50000;
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -28,7 +28,7 @@ public static class VoicebankRenderEndpoint
         if (archive is null || archive.Length == 0)
             return Results.BadRequest(new { error = "UTAU音源ZIPを選択してください。" });
         if (archive.Length > MaxArchiveBytes)
-            return Results.BadRequest(new { error = "ZIPファイルは256MB以下にしてください。" });
+            return Results.BadRequest(new { error = "ZIPファイルは800MB以下にしてください。" });
         if (!string.IsNullOrWhiteSpace(phonemizer) && phonemizer != "ja-vcv" && phonemizer != "ja-cvvc")
             return Results.BadRequest(new { error = "対応する発音方式は ja-vcv / ja-cvvc です。" });
         if (!await EngineWorkGate.Gate.WaitAsync(0))
