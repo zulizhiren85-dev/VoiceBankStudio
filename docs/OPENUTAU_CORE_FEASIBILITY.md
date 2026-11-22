@@ -70,7 +70,7 @@ The first POC should use synthetic fixtures or a freely redistributable test voi
 
 ## Proposed next implementation step
 
-An initial isolated `engine-dotnet/` smoke-test project and GitHub Actions workflow have been added. They pin OpenUtau to commit `08222cb7c48c4ab47faa34a6efc34e2c00898a1e`, reference the Builtin project (which references Core), and attempt to load and instantiate the Japanese VCV/CVVC phonemizer classes on Linux without launching Avalonia. This first check tests compilation and assembly loading only; it does not yet prove singer loading, headless initialization, or audio rendering. After it passes, add a dedicated Dockerfile and expand the POC in stages.
+An isolated `engine-dotnet/` smoke-test project and a separate ASP.NET Core HTTP host now exist on the feature branch. Both pin OpenUtau to commit `08222cb7c48c4ab47faa34a6efc34e2c00898a1e` and reference the Builtin project (which references Core). The HTTP host exposes `/health` and `/api/v1/engine/status`; its CI job builds the service, starts it on Linux, and checks that the Japanese VCV/CVVC phonemizer classes can be loaded and instantiated without launching Avalonia. This is still only an assembly/phonemizer availability check: it does not yet load a singer, parse a real voicebank, initialize the full document/render pipeline, or produce audio. The next proof must add an isolated synthetic voicebank fixture and verify OpenUtau's own `VoicebankLoader` before attempting rendering.
 
 Do not yet modify the existing Render Python service, public Pages entry point, or main branch. If a full Core reference cannot be initialized headlessly, reduce the POC to a smaller adapter/fork boundary and document the exact desktop-only dependencies before attempting broad refactoring.
 
