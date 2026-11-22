@@ -15,6 +15,7 @@ from voicebankstudio_audio import AudioAnalysisError, analyze_wav
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 MAX_DURATION_SECONDS = 600
+API_VERSION = "0.3.1"
 OUTPUT_RATE = 22050
 ALLOWED_EXTENSIONS = {
     ".wav", ".wave", ".mp3", ".flac", ".m4a", ".aac",
@@ -24,7 +25,7 @@ ALLOWED_ORIGINS = ["https://zulizhiren85-dev.github.io"]
 
 app = FastAPI(
     title="VoiceBankStudio Analysis API",
-    version="0.3.0",
+    version=API_VERSION,
     description="Temporary multi-format audio upload, conversion to PCM WAV, and analysis.",
 )
 app.add_middleware(
@@ -44,7 +45,7 @@ def root() -> dict:
 def health() -> dict:
     return {
         "status": "ok",
-        "api_version": "0.3.0",
+        "api_version": API_VERSION,
         "max_duration_seconds": MAX_DURATION_SECONDS,
         "max_upload_bytes": MAX_UPLOAD_BYTES,
     }
