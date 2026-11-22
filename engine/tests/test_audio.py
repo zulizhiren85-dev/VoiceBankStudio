@@ -126,6 +126,44 @@ class AudioAnalysisTests(unittest.TestCase):
             self.assertEqual(result["pitch_detected_frame_count"], 0)
             self.assertEqual(result["pitch_hz"], 0.0)
 
+    def make_pcm_tone(self, frequency, seconds=0.5, rate=16000, amplitude=0.5):
+        pcm = bytearray()
+        for index in range(int(seconds * rate)):
+            sample = int(amplitude * 32767 * math.sin(2 * math.pi * frequency * index / rate))
+            pcm.extend(sample.to_bytes(2, "little", signed=True))
+        return bytes(pcm)
+
+    def test_pitch_accuracy_across_supported_frequency_range(self):
+        # Exercise low, middle, and high notes rather than validating only A3.
+        for frequency in (60.0, 80.0, 110.0, 220.0, 440.0, 880.0, 1000.0):
+            with self.subTest(frequency=frequency):
+                result = dsp.analyze_pcm(self.make_pcm_tone(frequency), 16000, 1, 2)
+                self.assertGreater(result["pitch_confidence"], 0.55)
+                self.assertAlmostEqual(result["pitch_hz"], frequency, delta=max(5.0, frequency * 0.025))
+
+    def test_pitch_estimator_rejects_unvoiced_white_noise(self):
+        # Deterministic pseudo-random noise represents a non-periodic breath/noise segment.
+        state = 123456789
+        pcm = bytearray()
+        for _ in range(8000):
+            state = (1103515245 * state + 12345) & 0x7fffffff
+            sample = int(((state / 0x7fffffff) * 2.0 - 1.0) * 0.25 * 32767)
+            pcm.extend(sample.to_bytes(2, "little", signed=True))
+        result = dsp.analyze_pcm(bytes(pcm), 16000, 1, 2)
+        self.assertEqual(result["pitch_hz"], 0.0)
+
+    def test_python_fallback_pitch_accuracy_across_frequency_range(self):
+        native = dsp._native_analyze
+        try:
+            dsp._native_analyze = None
+            for frequency in (60.0, 110.0, 220.0, 440.0, 880.0, 1000.0):
+                with self.subTest(frequency=frequency):
+                    result = dsp.analyze_pcm(self.make_pcm_tone(frequency), 16000, 1, 2)
+                    self.assertGreater(result["pitch_confidence"], 0.55)
+                    self.assertAlmostEqual(result["pitch_hz"], frequency, delta=max(5.0, frequency * 0.025))
+        finally:
+            dsp._native_analyze = native
+
     def test_source_file_is_not_modified(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "tone.wav"
