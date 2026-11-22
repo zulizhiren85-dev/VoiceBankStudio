@@ -78,14 +78,14 @@ async function loadFiles(files,mode){
   if(!oto.length)throw Error("ZIP内にoto.iniが見つかりません。音源フォルダごとZIPにしてください。");
   const readText=async e=>{const raw=await(await zipFile(e)).arrayBuffer();try{return new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){return new TextDecoder("shift_jis").decode(raw);}};
   for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます（16MB上限）。");const txt=await readText(e),dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
-  const pm=[...state.entries.values()].find(e=>e.name.split("/").length===1&&e.name.toLowerCase()==="prefix.map");
+  const pm=[...state.entries.values()].filter(e=>e.name.toLowerCase().endsWith("/prefix.map")||e.name.toLowerCase()==="prefix.map").sort((a,b)=>a.name.length-b.name.length)[0];
   if(pm)parsePrefixMap(await readText(pm));
  }else{
   for(const f of list){const path=norm(f.webkitRelativePath||f.name);if(path.toLowerCase().endsWith(".wav"))state.files.set(path,f);}
   const oto=list.filter(f=>f.name.toLowerCase()==="oto.ini");if(!oto.length)throw Error("選択フォルダ内にoto.iniが見つかりません。音源の一番上のフォルダを選択してください。");
   const readText=async f=>{const raw=await f.arrayBuffer();try{return new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){return new TextDecoder("shift_jis").decode(raw);}};
   for(const f of oto){const path=norm(f.webkitRelativePath||f.name),dir=path.slice(0,path.lastIndexOf("/")+1);state.rows.push(...parseOto(await readText(f),dir));}
-  const pm=list.find(f=>f.name.toLowerCase()==="prefix.map"&&!(f.webkitRelativePath||f.name).includes("/"));
+  const pm=list.filter(f=>f.name.toLowerCase()==="prefix.map").sort((a,b)=>(a.webkitRelativePath||a.name).length-(b.webkitRelativePath||b.name).length)[0];
   if(pm)parsePrefixMap(await readText(pm));
  }
  if(!state.rows.length)throw Error("oto.iniは見つかりましたが、有効な設定行がありません。");
@@ -94,7 +94,7 @@ async function loadFiles(files,mode){
 }
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbFolder").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"folder");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
-$("vbClear").addEventListener("click",()=>{stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
+$("vbClear").addEventListener("click",()=>{stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
 
 const decodedCache=new Map();let synthContext=null,synthSources=[];
 function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
