@@ -196,6 +196,25 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             await OnEngineThread(() =>
             {
                 DocManager.Inst.ExecuteCmd(new LoadProjectNotification(new UProject()));
+                var cachePath = PathManager.Inst.CachePath;
+                try
+                {
+                    if (Directory.Exists(cachePath))
+                    {
+                        foreach (var file in Directory.EnumerateFiles(cachePath))
+                        {
+                            try { File.Delete(file); } catch { }
+                        }
+                        foreach (var directory in Directory.EnumerateDirectories(cachePath))
+                        {
+                            try { Directory.Delete(directory, recursive: true); } catch { }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Cache cleanup is best-effort; the uploaded voicebank folder is still deleted by the request handler.
+                }
                 return true;
             });
         }
