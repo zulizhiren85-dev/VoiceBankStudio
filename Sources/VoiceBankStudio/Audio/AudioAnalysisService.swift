@@ -58,7 +58,8 @@ enum AudioAnalysisService {
         }
         var peak = 0.0
         var sumSquares = 0.0
-        var sampleCount: Int64 = 0
+        var metricSampleCount: Int64 = 0
+        var analyzedFrames: Int64 = 0
         var timeline: [PitchSample] = []
         var chunkIndex = 0
 
@@ -71,14 +72,15 @@ enum AudioAnalysisService {
             for frame in 0..<frames {
                 var mixed = 0.0
                 for channel in 0..<channels {
-                    mixed += Double(channelData[channel][frame])
+                    let channelSample = Double(channelData[channel][frame])
+                    mixed += channelSample
+                    peak = max(peak, abs(channelSample))
+                    sumSquares += channelSample * channelSample
+                    metricSampleCount += 1
                 }
-                mixed /= Double(channels)
-                mono[frame] = mixed
-                peak = max(peak, abs(mixed))
-                sumSquares += mixed * mixed
-                sampleCount += 1
+                mono[frame] = mixed / Double(channels)
             }
+            analyzedFrames += Int64(frames)
 
             if frames >= Int(sampleRate * 0.08) {
                 let estimate = estimatePitch(mono, sampleRate: sampleRate)
@@ -93,8 +95,8 @@ enum AudioAnalysisService {
             chunkIndex += 1
         }
 
-        guard sampleCount > 0 else { throw AudioAnalysisError.emptyAudio }
-        let rms = sqrt(sumSquares / Double(sampleCount))
+        guard analyzedFrames > 0, metricSampleCount > 0 else { throw AudioAnalysisError.emptyAudio }
+        let rms = sqrt(sumSquares / Double(metricSampleCount))
         return AudioAnalysisResult(
             fileName: url.lastPathComponent,
             durationSeconds: Double(totalFrames) / sampleRate,
@@ -103,12 +105,12 @@ enum AudioAnalysisService {
             peak: peak,
             rms: rms,
             pitchSamples: timeline,
-            analyzedFrames: sampleCount
+            analyzedFrames: analyzedFrames
         )
     }
 
     private static func estimatePitch(_ source: [Double], sampleRate: Double) -> (frequency: Double?, confidence: Double) {
-        let stride = max(1, source.count / 4096)
+        let stride = max(1, Int(ceil(Double(source.count) / 2048.0)))
         let samples = Swift.stride(from: 0, to: source.count, by: stride).map { source[$0] }
         guard samples.count >= 128 else { return (nil, 0) }
 
