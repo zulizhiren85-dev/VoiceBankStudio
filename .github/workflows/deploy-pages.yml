@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "index.html"
+      - "voicebank.js"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
