@@ -9,4 +9,4 @@ services:
     autoDeploy: true
     envVars:
       - key: VOICEBANKSTUDIO_ALLOWED_ORIGINS
-        value: https://zulizhiren85-dev.github.io
+        value: https://zulizhiren85-dev.github.io,https://voicebankstudio-preview.onrender.com
