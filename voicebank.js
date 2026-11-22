@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 const $=id=>document.getElementById(id);
-const state={entries:new Map(),files:new Map(),rows:[],audioUrl:null,archive:null};
+const state={entries:new Map(),files:new Map(),rows:[],prefixMap:new Map(),audioUrl:null,archive:null};
 const MAX_ARCHIVE=1024*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
 const norm=s=>String(s||"").replace(/\\/g,"/").replace(/^\/+/,"");
 function parseOto(text,prefix){
@@ -71,16 +71,22 @@ async function preview(path,button){
  }catch(e){$("vbStatus").textContent="試聴エラー: "+e.message;button.textContent="▶ 試聴";}finally{button.disabled=false;}
 }
 async function loadFiles(files,mode){
- stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.archive=null;$("vbStatus").textContent="音源を調べています…";$("vbRows").replaceChildren();
+ stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;$("vbStatus").textContent="音源を調べています…";$("vbRows").replaceChildren();
  const list=Array.from(files||[]);if(!list.length)throw Error("ファイルが選択されていません。");
  if(mode==="zip"){
   state.archive=list[0];state.entries=await readZip(list[0]);const oto=[...state.entries.values()].filter(e=>e.name.toLowerCase().endsWith("oto.ini"));
   if(!oto.length)throw Error("ZIP内にoto.iniが見つかりません。音源フォルダごとZIPにしてください。");
-  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます（16MB上限）。");const raw=await(await zipFile(e)).arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}const dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
+  const readText=async e=>{const raw=await(await zipFile(e)).arrayBuffer();try{return new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){return new TextDecoder("shift_jis").decode(raw);}};
+  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます（16MB上限）。");const txt=await readText(e),dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
+  const pm=[...state.entries.values()].find(e=>e.name.split("/").length===1&&e.name.toLowerCase()==="prefix.map");
+  if(pm)parsePrefixMap(await readText(pm));
  }else{
   for(const f of list){const path=norm(f.webkitRelativePath||f.name);if(path.toLowerCase().endsWith(".wav"))state.files.set(path,f);}
   const oto=list.filter(f=>f.name.toLowerCase()==="oto.ini");if(!oto.length)throw Error("選択フォルダ内にoto.iniが見つかりません。音源の一番上のフォルダを選択してください。");
-  for(const f of oto){const path=norm(f.webkitRelativePath||f.name),dir=path.slice(0,path.lastIndexOf("/")+1),raw=await f.arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}state.rows.push(...parseOto(txt,dir));}
+  const readText=async f=>{const raw=await f.arrayBuffer();try{return new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){return new TextDecoder("shift_jis").decode(raw);}};
+  for(const f of oto){const path=norm(f.webkitRelativePath||f.name),dir=path.slice(0,path.lastIndexOf("/")+1);state.rows.push(...parseOto(await readText(f),dir));}
+  const pm=list.find(f=>f.name.toLowerCase()==="prefix.map"&&!(f.webkitRelativePath||f.name).includes("/"));
+  if(pm)parsePrefixMap(await readText(pm));
  }
  if(!state.rows.length)throw Error("oto.iniは見つかりましたが、有効な設定行がありません。");
  const missing=state.rows.filter(r=>!state.files.has(r.file)&&!state.entries.has(r.file)).length;render();
@@ -114,15 +120,47 @@ function aliasKey(s){
   .replaceAll("\\t"," ").replaceAll("\\r"," ").replaceAll("\\n"," ")
   .split(" ").filter(Boolean).join(" ");
 }
-function chooseRow(lyric,previous,first=false){
+function pitchNumber(p){
+ const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\\d)$/);if(!m)return null;
+ const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);
+ return (Number(m[3])+1)*12+sem;
+}
+function parsePrefixMap(text){
+ state.prefixMap.clear();
+ for(const line of String(text||"").replace(/^\\uFEFF/,"").split(/\\r?\\n/)){
+  if(!line.trim()||line.trim().startsWith(";"))continue;
+  const fields=line.split("\\t");
+  const note=(fields[0]||"").trim(),m=note.match(/^([A-G])([#B]?)(-?\\d)$/i);
+  if(!m)continue;
+  const prefix=String(fields[1]||"").trim(),suffix=String(fields[2]||"").trim();
+  state.prefixMap.set(pitchNumber(note),{prefix,suffix,note});
+ }
+}
+function chooseRow(lyric,previous,first,pitch){
  const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous);
  if(!target)return null;
- const candidates=prev
-  ?[prev+" "+target,"* "+target,target,"- "+target,prev+target,prev+"-"+target,prev+"_"+target]
-  :["- "+target,target,"-"+target,"_ "+target,"_"+target];
+ const candidates=prev?[prev+" "+target,"* "+target,target,"- "+target,prev+target,prev+"-"+target,prev+"_"+target]:["- "+target,target,"-"+target,"_ "+target,"_"+target];
+ const midi=pitchNumber(pitch),mapped=midi===null?null:state.prefixMap.get(midi);
  const lookup=new Map();
- for(const row of state.rows){const key=aliasKey(row.alias);if(!lookup.has(key))lookup.set(key,row);}
- for(const candidate of candidates){const row=lookup.get(aliasKey(candidate));if(row)return row;}
+ for(const row of state.rows){const key=aliasKey(row.alias);if(!lookup.has(key))lookup.set(key,[]);lookup.get(key).push(row);}
+ const variants=[];
+ if(mapped){
+  for(const c of candidates)variants.push(mapped.prefix+c+mapped.suffix);
+ }
+ for(const c of candidates)variants.push(c);
+ for(const candidate of variants){
+  const rows=lookup.get(aliasKey(candidate));if(!rows||!rows.length)continue;
+  if(rows.length===1)return rows[0];
+  if(midi!==null){
+   const ranked=rows.map(row=>{
+    const match=row.file.match(/(?:^|\\/)([A-G])([#B]?)(-?\\d)(?:\\/|$)/i);
+    const root=match?pitchNumber(match[1]+match[2]+match[3]):null;
+    return {row,distance:root===null?Infinity:Math.abs(root-midi)};
+   }).sort((a,b)=>a.distance-b.distance);
+   if(Number.isFinite(ranked[0].distance))return ranked[0].row;
+  }
+  return rows[0];
+ }
  return null;
 }
 async function sampleBuffer(path){
@@ -144,7 +182,7 @@ async function playNotes(notes,options={}){
  const ordered=notes.slice().sort((a,b)=>Number(a.start)-Number(b.start)),plans=[],missing=[];let previous="",previousEnd=-Infinity;
  for(const n of ordered){
   const start=Math.max(0,Number(n.start)||0),beats=Math.max(.05,Number(n.beats)||1);
-  const first=start-previousEnd>.05,row=chooseRow(n.lyric,first?"":previous,first);
+  const first=start-previousEnd>.05,row=chooseRow(n.lyric,first?"":previous,first,n.pitch);
   previous=n.lyric;previousEnd=start+beats;
   if(!row||!row.valid){missing.push(String(n.lyric||"（空欄）"));continue;}
   try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer,start,beats});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
@@ -174,6 +212,6 @@ async function playNotes(notes,options={}){
  return {scheduled:plans.length,aliases:plans.map(p=>p.row.alias)};
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
-window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,playNotes,stop:stopSinging};
+window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size})};
 
 })();
