@@ -68,7 +68,7 @@ jobs:
           with open(os.path.join(root, "character.txt"), "w", encoding="ascii") as f:
               f.write("name=VoiceBankStudio CI Fixture\n")
           with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
-              f.write("a.wav=あ,0,100,0,0,0\n")
+              f.write("a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\na.wav=a k,0,100,0,0,0\n")
           with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
               wav.setnchannels(1)
               wav.setsampwidth(2)
@@ -90,9 +90,9 @@ jobs:
           with open("/tmp/vbs-voicebank-result.json", encoding="utf-8") as f:
               result = json.load(f)
           assert result["loaded"] is True, result
-          assert result["otoCount"] == 1, result
-          assert result["phonemizerTests"]["vcv"] == ["あ"], result
-          assert result["phonemizerTests"]["cvvc"] == ["あ"], result
+          assert result["otoCount"] == 3, result
+          assert result["phonemizerTests"]["vcv"] == ["a か"], result
+          assert result["phonemizerTests"]["cvvc"] == ["あ", "a k"], result
           print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
           PY
 
