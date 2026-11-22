@@ -115,17 +115,18 @@ app.MapGet("/api/v1/engine/status", () =>
         },
         voicebankInspectionAvailable = true,
         renderingApiAvailable = true,
-        singleNoteRenderVerified = true,
-        multiPhraseVcvRenderVerified = true,
-        cvvcRenderVerified = true,
-        cvFallbackVerified = true,
-        prefixMapMultiPitchVerified = true,
-        docker512MiBRenderVerified = true,
+        enginePrerequisitesReady = inspection.Missing.Length == 0 && inspection.Error is null,
         realVoicebankVerified = false,
-        renderingReady = true,
+        uploadLimits = new
+        {
+            maxArchiveBytes = 800L * 1024 * 1024,
+            maxRequestBodyBytes = 820L * 1024 * 1024,
+            maxExpandedBytes = 1024L * 1024 * 1024,
+            maxEntries = 50000,
+        },
         outputFormat = "WAV PCM16 mono 44100 Hz",
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
-        note = "Linux CI has rendered non-silent single-note, multi-phrase VCV, and two-note CVVC WAV files from a synthetic voicebank; it also verified CV fallback, C4/C5 prefix.map mapping, and a Docker render under a 512 MiB memory limit. Real-world voicebank quality and iPad playback still need user-bank validation.",
+        note = "This endpoint reports runtime engine and phonemizer availability only. GitHub Actions separately exercises synthetic voicebank loading, single-note and multi-note VCV/CVVC rendering, CV fallback, prefix.map, ZIP path traversal rejection, and a constrained Docker render. Real-world voicebank quality and iPad playback still require validation with an actual user voicebank.",
         error = inspection.Error,
     });
 });
