@@ -225,7 +225,7 @@ function importAnalysisToSong(){
  render();$('msg').textContent='解析結果から '+notes.length+' 音の仮メロディを作りました。音程・歌詞・長さを確認して調整してください。';
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
-const OPENUTAU_ENGINE_API='https://voicebankstudio-openutau-engine.onrender.com';
+const OPENUTAU_ENGINE_API = "https://voicebankstudio-openutau-engine-539e.onrender.com";
 $('inspectVoicebank').addEventListener('click',async()=>{
  const btn=$('inspectVoicebank'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
  btn.disabled=true;
