@@ -6,6 +6,7 @@ using OpenUtau.Core.Render;
 using OpenUtau.Core.Ustx;
 using OpenUtau.Core.Util;
 using OpenUtau.Plugin.Builtin;
+using Microsoft.Extensions.Logging;
 
 namespace VoiceBankStudio.Engine;
 
@@ -28,6 +29,7 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         public void Stop() => queue.CompleteAdding();
     }
 
+    private readonly ILogger<HeadlessOpenUtauHost> logger;
     private readonly EngineSynchronizationContext context = new();
     private readonly TaskCompletionSource<TaskScheduler> ready =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -35,8 +37,10 @@ public sealed class HeadlessOpenUtauHost : IDisposable
     private TaskScheduler? scheduler;
     private bool disposed;
 
-    public HeadlessOpenUtauHost()
+    public HeadlessOpenUtauHost(ILogger<HeadlessOpenUtauHost> logger)
     {
+        this.logger = logger;
+        logger.LogInformation("OpenUtau headless host initialization started.");
         thread = new Thread(InitializeAndRun)
         {
             IsBackground = true,
@@ -44,6 +48,7 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         };
         thread.Start();
         scheduler = ready.Task.GetAwaiter().GetResult();
+        logger.LogInformation("OpenUtau headless host initialization completed.");
     }
 
     private void InitializeAndRun()
@@ -88,6 +93,7 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         if (!double.IsFinite(bpm) || bpm is < 40 or > 300)
             throw new ArgumentException("BPMは40〜300の範囲にしてください。");
 
+        logger.LogInformation("OpenUtau render started. Notes={NoteCount}, Phonemizer={Phonemizer}, BPM={Bpm}", notes.Count, phonemizer, bpm);
         try
         {
             var state = await OnEngineThread(() =>
@@ -135,6 +141,7 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             return (project, part);
         });
 
+            logger.LogInformation("OpenUtau project created and validated. Waiting for phoneme generation.");
             var deadline = DateTime.UtcNow.AddSeconds(30);
             RenderPhrase[] phrases = Array.Empty<RenderPhrase>();
             while (DateTime.UtcNow < deadline)
@@ -145,27 +152,36 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                 if (readyState.Item1 && readyState.Item2.Length > 0)
                 {
                     phrases = readyState.Item2;
+                    logger.LogInformation("OpenUtau phoneme generation completed. PhraseCount={PhraseCount}", phrases.Length);
                     break;
                 }
                 await Task.Delay(50, cancellationToken);
             }
 
             if (phrases.Length == 0)
+            {
+                logger.LogWarning("OpenUtau phoneme generation timed out after 30 seconds.");
                 throw new InvalidOperationException("OpenUtauの音素変換またはフレーズ生成が30秒以内に完了しませんでした。");
+            }
 
             var renderer = new WorldlineRenderer(version: 10);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var renderedPhrases = new List<(int Start, float[] Samples)>();
             int totalSamples = 0;
+            int phraseIndex = 0;
             foreach (var phrase in phrases)
             {
+                phraseIndex++;
                 cancellationToken.ThrowIfCancellationRequested();
+                logger.LogInformation("Worldline render started. Phrase={PhraseIndex}/{PhraseCount}, Phones={PhoneCount}", phraseIndex, phrases.Length, phrase.phones.Length);
+                var renderStartedAt = DateTime.UtcNow;
                 var result = await renderer.Render(
                     phrase,
                     new Progress(Math.Max(1, phrase.phones.Length)),
                     trackNo: 0,
                     cancellation: renderCancellation,
                     isPreRender: false);
+                logger.LogInformation("Worldline render completed. Phrase={PhraseIndex}/{PhraseCount}, Samples={SampleCount}, ElapsedMs={ElapsedMs}", phraseIndex, phrases.Length, result.samples?.Length ?? 0, (DateTime.UtcNow-renderStartedAt).TotalMilliseconds);
 
                 if (result.samples is null || result.samples.Length == 0)
                     throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
@@ -189,10 +205,17 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                 for (int i = 0; i < rendered.Samples.Length; i++)
                     mixed[rendered.Start + i] += rendered.Samples[i];
             }
+            logger.LogInformation("OpenUtau render completed. TotalSamples={TotalSamples}", mixed.Length);
             return mixed;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "OpenUtau render failed.");
+            throw;
         }
         finally
         {
+            logger.LogInformation("OpenUtau render cleanup started.");
             try
             {
                 await OnEngineThread(() =>
