@@ -58,7 +58,7 @@ const ANALYSIS_API='https://voicebankstudio-analysis-zulizhiren85.onrender.com';
 let uploadInProgress=false,lastAutoUploadFile=null;
 async function uploadAudioFile(f,ask=true){
   if(!f){$('analysis').textContent='ファイルが選択されていません。';return}
-  if(!/\.wav(e)?$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
+  if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
   if(f.size>25*1024*1024){$('analysis').textContent='サーバーへ送れる音源は25MB以下です。';return}
   if(f.size===0){$('analysis').textContent='ファイルサイズが0バイトです。別のファイルを選んでください。';return}
   if(uploadInProgress)return;
@@ -81,7 +81,7 @@ async function uploadAudioFile(f,ask=true){
       const noteSummary=frames.slice(0,24).map(x=>x.time_seconds+'秒: '+x.note).join(' / ')||'有声音程を検出できませんでした';
       $('analysis').textContent='サーバー解析完了！\n長さ: '+r.duration_seconds+'秒\nサンプルレート: '+r.sample_rate+' Hz / '+r.channels+'ch\n推定BPM: '+(r.tempo_bpm||'未検出')+'（信頼度 '+r.tempo_confidence+'）\n音程サンプル: '+noteSummary+'\n\n'+r.analysis_note+'\n\nサーバー上の一時ファイルは処理終了後に削除されます。';
       $('fileInfo').textContent=f.name+' / サーバー解析済み';
-    }catch(err){$('analysis').textContent='サーバー解析エラー: '+(err.message||String(err))+'。別のWAVファイルでも試せます。';}
+    }catch(err){$('analysis').textContent='サーバー解析エラー: '+(err.message||String(err))+'。別の対応形式の音源でも試せます。';}
     uploadInProgress=false;btn.disabled=false;
   };
   xhr.onerror=()=>{$('analysis').textContent='サーバーに接続できませんでした。通信環境またはサーバーの状態を確認してください。';uploadInProgress=false;btn.disabled=false};
