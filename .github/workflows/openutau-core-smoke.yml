@@ -1,0 +1,39 @@
+name: OpenUtau Core Smoke Test
+
+on:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
+    paths:
+      - "engine-dotnet/**"
+      - ".github/workflows/openutau-core-smoke.yml"
+  pull_request:
+    paths:
+      - "engine-dotnet/**"
+      - ".github/workflows/openutau-core-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  linux-core-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Fetch pinned OpenUtau source
+        env:
+          OPENUTAU_COMMIT: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e"
+        run: |
+          git clone https://github.com/openutau/OpenUtau.git "$RUNNER_TEMP/OpenUtau"
+          git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
+          test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+
+      - name: Build and run Core/Builtin smoke test
+        run: |
+          dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
+            --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
