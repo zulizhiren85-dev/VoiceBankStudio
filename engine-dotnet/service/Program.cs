@@ -33,11 +33,11 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
+    options.Limits.MaxRequestBodySize = 820L * 1024 * 1024; // 800 MiB archive plus multipart overhead
 });
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 270L * 1024 * 1024;
+    options.MultipartBodyLengthLimit = 820L * 1024 * 1024; // 800 MiB archive plus multipart overhead
 });
 var app = builder.Build();
 app.UseRouting();
