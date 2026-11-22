@@ -55,7 +55,7 @@ function download(blob,name){const a=document.createElement('a'),url=URL.createO
 $('load').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.notes))throw Error('notes');notes=d.notes.map((n,i)=>({id:Number(n.id)||i+1,pitch:String(n.pitch||'C4'),lyric:String(n.lyric||''),beats:Number(n.beats)||1,start:Number(n.start)||0}));nextId=Math.max(0,...notes.map(n=>n.id))+1;$('bpm').value=d.bpm||120;$('meter').value=d.meter||'4/4';render();$('msg').textContent='プロジェクトを読み込みました。'}catch(err){$('msg').textContent='読み込めませんでした。VoiceBankStudioで保存したJSONか確認してください。'}e.target.value=''};
 const audioPicker=$('audioFile');
 const ANALYSIS_API='https://voicebankstudio-analysis-zulizhiren85.onrender.com';
-let uploadInProgress=false,lastAutoUploadFile=null;
+let uploadInProgress=false;
 async function uploadAudioFile(f,ask=true){
   if(!f){$('analysis').textContent='ファイルが選択されていません。';return}
   if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
@@ -92,19 +92,63 @@ $('serverAnalyze').addEventListener('click',()=>{const f=audioPicker.files&&audi
 $('checkAudio').onclick=()=>{const ok=syncAudioPicker();if(!ok){$('fileInfo').textContent='iPadからファイル情報が届いていません。ファイル選択ボタンからWAVを選び直してください。';$('analysis').textContent='確認結果：audioFile.files が空です。';}else{$('analysis').textContent='確認結果：ファイル情報を受け取りました。送信または読み込みができます。';}};
 $('loadAudio').onclick=()=>{const f=(audioPicker.files&&audioPicker.files.length)?audioPicker.files[0]:null;$('fileInfo').textContent='読み込みボタンを押しました。ファイルを確認しています…';if(!f){$('fileInfo').textContent='ファイルがまだ渡されていません。上のファイル欄から選び直してください。';$('analysis').textContent='ファイル選択情報が見つかりません。';return}$('analysis').textContent='読み込み処理を開始しました: '+f.name;handleAudioSelection(f).catch(err=>{$('analysis').textContent='読み込み処理エラー: '+(err&&err.message?err.message:String(err));});};
 function syncAudioPicker(){const f=audioPicker.files&&audioPicker.files.length?audioPicker.files[0]:null;if(!f)return false;$('fileInfo').textContent='選択済み: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB。「選択した音源を読み込む」または「サーバーへ送って解析」を押してください。';$('analysis').textContent='ファイルを選択しました。';$('serverAnalyze').disabled=false;return true}
-function onAudioPickerChanged(){if(!syncAudioPicker()){$('fileInfo').textContent='ファイル選択画面から戻りました。ファイルが選択されているか確認してください。';return}const f=audioPicker.files&&audioPicker.files[0];if(f&&f!==lastAutoUploadFile){lastAutoUploadFile=f;uploadAudioFile(f,true)}}
 audioPicker.addEventListener('change',(event)=>{
   const selected=event.currentTarget.files && event.currentTarget.files.length ? event.currentTarget.files[0] : null;
-  if(!selected){$('fileInfo').textContent='ファイルが選択されていません。';return;}
-  $('fileInfo').textContent='選択済み: '+selected.name+' / '+(selected.size/1024/1024).toFixed(1)+' MB';
-  $('analysis').textContent='ファイル情報を受け取りました。送信確認を待っています。';
+  if(!selected){
+    $('fileInfo').textContent='ファイルが選択されていません。';
+    $('analysis').textContent='確認待ち：ファイルが選択されていません。';
+    return;
+  }
+  $('fileInfo').textContent='選択確認OK: '+selected.name+' / '+selected.size.toLocaleString()+' bytes / '+(selected.type||'形式情報なし');
+  $('analysis').textContent='段階1/4 成功：ファイル情報を取得しました。次に「選択した音源を読み込む」を押すと、本体データを確認します。';
   $('serverAnalyze').disabled=false;
-  if(selected!==lastAutoUploadFile){lastAutoUploadFile=selected;uploadAudioFile(selected,true);}
 });
 // iPad Safariではファイル選択画面から戻った直後に反映が遅れる場合があるため再確認
 window.addEventListener('focus',()=>{setTimeout(syncAudioPicker,300)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(syncAudioPicker,300)});
-async function handleAudioSelection(f){if(!f)return;decoded=null;$('analyze').disabled=true;$('fileInfo').textContent='選択: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB / '+(f.type||'形式情報なし')+'。読み込み中…';$('analysis').textContent='音声データを展開しています。ファイルサイズによって少し時間がかかります。';try{if(!f.size)throw Error('ファイルサイズが0バイトです');if(objectURL)URL.revokeObjectURL(objectURL);objectURL=URL.createObjectURL(f);const audio=$('audio');audio.src=objectURL;audio.classList.remove('hidden');audio.load();const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('このブラウザでは音声解析機能を利用できません');ctx=ctx||new AC();if(ctx.state==='suspended'){try{await ctx.resume()}catch(resumeError){}}const raw=await f.arrayBuffer();if(raw.byteLength<16)throw Error('音声データが短すぎます');const head=new Uint8Array(raw,0,Math.min(12,raw.byteLength));const signature=String.fromCharCode(...head);const isWave=signature.startsWith('RIFF')||signature.startsWith('RF64')||signature.startsWith('RIFX');if((f.name.toLowerCase().endsWith('.wav')||f.name.toLowerCase().endsWith('.wave'))&&!isWave)throw Error('拡張子はWAVですが、ファイル内部にWAV形式の目印がありません。別のファイルか、再書き出ししたWAVを試してください');decoded=await ctx.decodeAudioData(raw.slice(0));$('fileInfo').textContent=f.name+' / '+decoded.duration.toFixed(2)+'秒 / '+decoded.sampleRate+' Hz / '+decoded.numberOfChannels+'ch';$('analyze').disabled=false;drawWave(decoded);$('analysis').textContent='音源を読み込みました。簡易解析を実行できます。'}catch(err){decoded=null;$('fileInfo').textContent='選択済み: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB';$('analysis').textContent='読み込みエラー: '+(err&&err.name?err.name+': ':'')+(err&&err.message?err.message:String(err))+'。この表示を教えてね。';$('analyze').disabled=true}}
+async function handleAudioSelection(f){
+  if(!f)return;
+  decoded=null;
+  $('analyze').disabled=true;
+  $('fileInfo').textContent='段階1/4：ファイル情報を確認中…';
+  $('analysis').textContent='ファイル名・容量・形式を確認しています。';
+  try{
+    if(!f.size)throw Error('ファイルサイズが0バイトです');
+    $('fileInfo').textContent='段階1/4 成功：'+f.name+' / '+f.size.toLocaleString()+' bytes / '+(f.type||'形式情報なし');
+    $('analysis').textContent='段階2/4：ファイル本体を読み取り中…';
+    const raw=await f.arrayBuffer();
+    if(raw.byteLength!==f.size)throw Error('読み取りサイズが一致しません（選択情報 '+f.size+' bytes / 実データ '+raw.byteLength+' bytes）');
+    if(raw.byteLength<16)throw Error('読み取ったデータが短すぎます（'+raw.byteLength+' bytes）');
+    $('fileInfo').textContent='段階2/4 成功：本体データ '+raw.byteLength.toLocaleString()+' bytes を読み取りました';
+    $('analysis').textContent='段階3/4：ファイル内部の形式情報を確認中…';
+    const head=new Uint8Array(raw,0,Math.min(12,raw.byteLength));
+    const signature=Array.from(head).map(v=>v.toString(16).padStart(2,'0')).join(' ');
+    const ascii=String.fromCharCode(...head).replace(/[^\x20-\x7e]/g,'.');
+    const isWave=ascii.startsWith('RIFF')||ascii.startsWith('RF64')||ascii.startsWith('RIFX');
+    $('fileInfo').textContent='段階3/4：先頭データ '+signature;
+    if((f.name.toLowerCase().endsWith('.wav')||f.name.toLowerCase().endsWith('.wave'))&&!isWave)throw Error('WAVの拡張子ですが、内部ヘッダーがWAV形式ではありません（先頭: '+ascii+'）');
+    $('analysis').textContent='段階3/4 成功：ファイル本体を確認しました。音声デコードを開始します。';
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)throw Error('このブラウザでは音声解析機能を利用できません');
+    ctx=ctx||new AC();
+    if(ctx.state==='suspended'){try{await ctx.resume()}catch(resumeError){}}
+    if(objectURL)URL.revokeObjectURL(objectURL);
+    objectURL=URL.createObjectURL(f);
+    const audio=$('audio');
+    audio.src=objectURL;
+    audio.classList.remove('hidden');
+    audio.load();
+    decoded=await ctx.decodeAudioData(raw.slice(0));
+    $('fileInfo').textContent='段階4/4 成功：'+f.name+' / '+decoded.duration.toFixed(2)+'秒 / '+decoded.sampleRate+' Hz / '+decoded.numberOfChannels+'ch';
+    $('analyze').disabled=false;
+    drawWave(decoded);
+    $('analysis').textContent='読み込み完了：ファイル本体の読み取りと音声デコードの両方に成功しました。簡易解析を実行できます。';
+  }catch(err){
+    decoded=null;
+    $('analysis').textContent='読み込み停止：'+(err&&err.name?err.name+': ':'')+(err&&err.message?err.message:String(err));
+    $('analyze').disabled=true;
+  }
+}
 function drawWave(b){const c=$('wave'),g=c.getContext('2d'),d=b.getChannelData(0);g.clearRect(0,0,c.width,c.height);g.strokeStyle='#83d6c4';g.beginPath();const step=Math.max(1,Math.floor(d.length/c.width));for(let x=0;x<c.width;x++){let lo=1,hi=-1;for(let j=0;j<step;j++){const v=d[x*step+j]||0;lo=Math.min(lo,v);hi=Math.max(hi,v)}g.moveTo(x,(1+lo)*c.height/2);g.lineTo(x,(1+hi)*c.height/2)}g.stroke()}
 function detectPitch(data,sr){let x=data,mean=0;for(let i=0;i<x.length;i++)mean+=x[i];mean/=x.length;let rms=0;for(let i=0;i<x.length;i++){x[i]-=mean;rms+=x[i]*x[i]}rms=Math.sqrt(rms/x.length);if(rms<.012)return null;let best=-1,bestCorr=0;const min=Math.floor(sr/1000),max=Math.min(Math.floor(sr/65),x.length-2);for(let lag=min;lag<=max;lag++){let corr=0,n=x.length-lag;for(let i=0;i<n;i++)corr+=x[i]*x[i+lag];corr/=n;if(corr>bestCorr){bestCorr=corr;best=lag}}if(best<1||bestCorr<.25)return null;return {hz:sr/best,confidence:bestCorr}}
 $('analyze').onclick=async()=>{if(!decoded){$('analysis').textContent='先に音源ファイルを読み込んでください。';return}const btn=$('analyze');btn.disabled=true;$('analysis').textContent='解析中です。音源の長さによって少し時間がかかります…';await new Promise(resolve=>setTimeout(resolve,30));try{const data=decoded.getChannelData(0),sr=decoded.sampleRate,duration=decoded.duration;const pitches=[];const stride=4,effectiveRate=sr/stride,frameSize=Math.floor(effectiveRate*.03),count=Math.min(72,Math.max(1,Math.floor(duration/.25)));for(let k=0;k<count;k++){const t=count===1?0:(duration-.04)*k/count;const pos=Math.floor(t*sr);if(pos+frameSize*stride>=data.length)continue;const frame=new Float32Array(frameSize);for(let i=0;i<frameSize;i++)frame[i]=data[pos+i*stride];const p=detectPitch(frame,effectiveRate);if(p&&p.hz>65&&p.hz<1000)pitches.push(p.hz)}let pitchText='有声音程を十分に検出できませんでした';if(pitches.length){const sorted=pitches.slice().sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)],midi=Math.round(69+12*Math.log2(median/440)),names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];pitchText='代表的な音高：約'+median.toFixed(1)+' Hz（'+names[(midi%12+12)%12]+(Math.floor(midi/12)-1)+'付近）。検出 '+pitches.length+'点'}const hop=Math.max(1,Math.floor(sr*.02)),win=Math.max(1,Math.floor(sr*.015)),peaks=[];let prev=0;for(let pos=0;pos+win<data.length;pos+=hop){let sum=0;for(let i=0;i<win;i+=4){const v=data[pos+i];sum+=v*v}const rms=Math.sqrt(sum/Math.max(1,Math.ceil(win/4)));if(rms>prev*1.7&&rms>.04)peaks.push(pos/sr);prev=prev*.8+rms*.2}const gaps=[];for(let i=1;i<peaks.length;i++){const gap=peaks[i]-peaks[i-1];if(gap>.22&&gap<1.5)gaps.push(gap)}let bpmText='BPMは未確定（音源の種類によって推定できない場合があります）';if(gaps.length){gaps.sort((a,b)=>a-b);let bpm=Math.round(60/gaps[Math.floor(gaps.length/2)]);while(bpm<60)bpm*=2;while(bpm>180)bpm=Math.round(bpm/2);bpmText='リズム候補：約'+bpm+' BPM（簡易推定・要確認）'}$('analysis').textContent='解析メモ（自動確定ではありません）\\n'+pitchText+'\\n'+bpmText+'\\n長さ：'+duration.toFixed(2)+'秒\\n\\n注意：現在は軽量な動作確認用解析です。和音・歌詞認識・ボーカル分離・原曲とインストの位相合わせはまだ未実装です。';}catch(err){$('analysis').textContent='解析中にエラーが発生しました：'+(err&&err.message?err.message:'不明なエラー')+'\\n音源を短くするか、対応形式の音源で再度お試しください。'}finally{btn.disabled=false}};
