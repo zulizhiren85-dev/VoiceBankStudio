@@ -5,6 +5,7 @@ WORKDIR /src
 RUN git clone https://github.com/openutau/OpenUtau.git /src/OpenUtau \
     && git -C /src/OpenUtau checkout "$OPENUTAU_COMMIT" \
     && test "$(git -C /src/OpenUtau rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+COPY engine-dotnet/OpenUtau.Directory.Build.targets /src/OpenUtau/Directory.Build.targets
 WORKDIR /src/VoiceBankStudio
 COPY . .
 RUN dotnet publish engine-dotnet/service/VoiceBankStudio.Service.csproj \
