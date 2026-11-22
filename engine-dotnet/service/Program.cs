@@ -2,6 +2,7 @@ using System.Reflection;
 using OpenUtau.Api;
 using VoiceBankStudio.Engine;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 const string serviceName = "VoiceBankStudio.Engine";
