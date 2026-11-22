@@ -26,10 +26,10 @@ public static class VoicebankArchiveInspector
 
         var jobRoot = Path.Combine(Path.GetTempPath(), "voicebankstudio", Guid.NewGuid().ToString("N"));
         var extractRoot = Path.Combine(jobRoot, "voicebank");
-        Directory.CreateDirectory(extractRoot);
 
         try
         {
+            Directory.CreateDirectory(extractRoot);
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var legacyEncoding = Encoding.GetEncoding(932);
             var seenPaths = new HashSet<string>(StringComparer.Ordinal);
