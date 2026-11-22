@@ -20,7 +20,7 @@
 <label>オクターブ<select id="octave"><option value="-2">−2（2オクターブ下）</option><option value="-1">−1（1オクターブ下）</option><option value="0" selected>±0（標準）</option><option value="1">＋1（1オクターブ上）</option><option value="2">＋2（2オクターブ上）</option></select></label>
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">日本語 VCV / CV</option><option value="ja-cvvc">日本語 CVVC</option></select></label><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">日本語 VCV / CV</option><option value="ja-cvvc">日本語 CVVC</option></select></label><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
@@ -226,6 +226,26 @@ function importAnalysisToSong(){
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
 const OPENUTAU_ENGINE_API='https://voicebankstudio-openutau-engine.onrender.com';
+$('inspectVoicebank').addEventListener('click',async()=>{
+ const btn=$('inspectVoicebank'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
+ btn.disabled=true;
+ try{
+  if(!api||!api.isReady())throw Error('先に⑤からUTAU音源を読み込んでください。');
+  const archive=api.getArchiveFile();
+  if(!archive)throw Error('OpenUtauで確認するには音源ZIPを読み込んでください。フォルダ読み込みはローカル試聴用です。');
+  status.textContent='音源ZIPをOpenUtauへ送信し、oto.ini・音階マップ・発音方式を確認しています…';
+  const form=new FormData();form.append('archive',archive,archive.name||'voicebank.zip');
+  const response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/voicebanks/inspect',{method:'POST',body:form});
+  let result={};try{result=await response.json();}catch(_){}
+  if(!response.ok)throw Error(result.detail||result.error||('HTTP '+response.status));
+  const aliases=(result.aliases||[]).slice(0,8).map(x=>x.alias).join(' / ');
+  const prefix=result.prefixMapTests||{};
+  const tests=result.phonemizerTests||{};
+  const errors=(result.errors||[]).slice(0,5).join(' / ');
+  status.textContent='OpenUtau音源チェック完了\n音源: '+(result.name||'名前不明')+'\noto.ini: '+(result.otoCount||0)+'件\n標準発音方式: '+(result.defaultPhonemizer||'未設定')+'\nVCV: '+(tests.vcv||[]).join(' → ')+'\nCV: '+(tests.cv||[]).join(' → ')+'\nCVVC: '+(tests.cvvc||[]).join(' → ')+'\n音階マップ: C4='+(prefix.c4||'未検出')+' / C5='+(prefix.c5||'未検出')+'\nエイリアス例: '+(aliases||'なし')+(errors?'\n警告: '+errors:'');
+ }catch(err){status.textContent='音源チェックエラー：'+(err&&err.message?err.message:String(err));}
+ finally{btn.disabled=false;}
+});
 ['bpm','octave','phonemizer'].forEach(id=>$(id).addEventListener('change',invalidateRenderedAudio));
 $('downloadRender').onclick=()=>{
  if(!renderedAudioUrl)return;
