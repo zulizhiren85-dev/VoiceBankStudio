@@ -19,7 +19,7 @@
 </div></section>
 <section class="panel"><h2>① メロディを作る</h2><p class="muted">音程・歌詞・長さを入力。最初からテスト用のメロディが入っています。</p>
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
-<div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ テスト再生</button><button id="voicePlay" class="primary">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">テスト曲に戻す</button></div>
+<div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ テスト再生</button><button id="voicePlay" class="primary" type="button">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">テスト曲に戻す</button></div><div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符や重ねた音も作れます。</p></section>
 <section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAVなどの音声を端末内で簡易解析できます。端末内解析は通信なし。サーバー解析を使う場合のみ、確認後に音源を送信します（100MB以下・10分以内）。</p>
 <div class="toolbar"><label for="audioFile">音源ファイル（複数選択可）</label><input id="audioFile" type="file" multiple accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを複数選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">先頭の音源を読み込む</button><button id="analyze" disabled>端末内で簡易解析（通信なし）</button><button id="serverAnalyze" disabled>サーバー解析（通信あり）</button><button id="serverAnalyzeBatch" type="button" disabled>複数音源をまとめて解析</button></div>
@@ -208,15 +208,17 @@ function importAnalysisToSong(){
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
 $('voicePlay').addEventListener('click',async()=>{
- const btn=$('voicePlay'),api=window.VoiceBankStudioVoicebank;
+ const btn=$('voicePlay'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
  btn.disabled=true;
- if(!api){$('msg').textContent='再生エンジンを読み込めていません。ページを再読み込みしてください。';btn.disabled=false;return;}
- if(!api.isReady()){$('msg').textContent='UTAU音源が読み込まれていません。⑤でZIPまたは音源フォルダを読み込んでください。';btn.disabled=false;return;}
- $('msg').textContent='原音を準備しています…';
+ const report=message=>{status.textContent=message;$('msg').textContent=message;};
  try{
+  report('歌唱ボタンを受け取りました。再生エンジンを確認中…');
+  if(!api)throw Error('再生エンジンが未読込です。ページを再読み込みしてください。');
+  if(!api.isReady())throw Error('UTAU音源が未読込です。⑤でZIPまたは音源フォルダを読み込んでください。');
+  report('原音WAVを準備しています…');
   const result=await api.playNotes(notes,{bpm:$('bpm').value,volume:$('volume').value});
-  $('msg').textContent=result.scheduled>0?'UTAU原音の試験再生を開始しました（'+result.scheduled+'音）。':'再生できる音符がありません。音程と歌詞を確認してください。';
- }catch(err){$('msg').textContent='歌声再生エラー：'+(err&&err.message?err.message:String(err));}
+  report('再生開始：'+result.scheduled+'音 / エイリアス：'+(result.aliases||[]).join('、'));
+ }catch(err){report('歌声再生エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=vcb-20261122-02" defer></script></body></html>
+</script><script src="voicebank.js?v=vcb-20261122-03" defer></script></body></html>
