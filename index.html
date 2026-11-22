@@ -255,7 +255,20 @@ $('inspectVoicebank').addEventListener('click',async()=>{
  finally{btn.disabled=false;}
 });
 ['bpm','octave','phonemizer'].forEach(id=>$(id).addEventListener('change',invalidateRenderedAudio));
-$('playRender').onclick=async()=>{\n if(!renderedAudio)return;\n try{await renderedAudio.play();const message='生成した歌声を再生中です…';$('voicePlayStatus').textContent=message;$('msg').textContent=message;}\n catch(err){const message='再生できませんでした：'+(err&&err.message?err.message:String(err));$('voicePlayStatus').textContent=message;$('msg').textContent=message;}\n};\n$('downloadRender').onclick=()=>{
+$('playRender').onclick=async()=>{
+ if(!renderedAudio)return;
+ try{
+  await renderedAudio.play();
+  const message='生成した歌声を再生中です…';
+  $('voicePlayStatus').textContent=message;
+  $('msg').textContent=message;
+ }catch(err){
+  const message='再生できませんでした：'+(err&&err.message?err.message:String(err));
+  $('voicePlayStatus').textContent=message;
+  $('msg').textContent=message;
+ }
+};
+$('downloadRender').onclick=()=>{
  if(!renderedAudioUrl)return;
  const link=document.createElement('a');link.href=renderedAudioUrl;link.download='VoiceBankStudio-render.wav';
  document.body.append(link);link.click();link.remove();
