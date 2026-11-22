@@ -100,7 +100,7 @@ function vowelOf(s){
  for(const [v,chars] of Object.entries(kana))if(chars.includes(last))return v;
  const roman=t.match(/[aiueo]$/);return roman?roman[0]:"";
 }
-function aliasKey(s){return String(s||"").normalize("NFC").trim().replace(/\\s+/g," ").toLowerCase();}
+function aliasKey(s){return String(s||"").normalize("NFC").trim().toLowerCase().split(" ").filter(Boolean).join(" ");}
 function chooseRow(lyric,previous,first=false){
  const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous),candidates=[];
  if(prev)candidates.push(prev+" "+target,prev+target,prev+"-"+target,prev+"_"+target);
@@ -147,7 +147,7 @@ async function playNotes(notes,options={}){
  for(let i=0;i<plans.length;i++){
   const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);if(!hz)continue;
   const folderPitch=row.file.split("/").find(part=>/^[A-G](?:#|b)?-?\d$/i.test(part));
-  const root=folderPitch?noteHz(folderPitch[1]):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
+  const root=folderPitch?noteHz(folderPitch):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
   const noteStart=now+start*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
   const nominalEnd=noteStart+beats*unit,nextStart=next?now+next.start*unit:nominalEnd;
