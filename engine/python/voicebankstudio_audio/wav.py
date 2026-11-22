@@ -86,6 +86,7 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
             total_rms_sq = 0.0
             total_metric_samples = 0
             global_peak = 0.0
+            analyzed_frames = 0
             window_frames = max(256, int(rate * pitch_window_seconds))
             # Sequential windows keep peak memory bounded even for long recordings.
             while True:
@@ -93,7 +94,7 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
                 if not raw:
                     break
                 frame_count = len(raw) // (channels * width)
-                if frame_count < int(rate * 0.08):
+                if frame_count < 2:
                     break
                 metrics = analyze_pcm(raw, rate, channels, width)
                 # Aggregate whole-file level statistics instead of reporting only
@@ -102,14 +103,16 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
                 total_rms_sq += (metrics["rms"] ** 2) * metric_samples
                 total_metric_samples += metric_samples
                 global_peak = max(global_peak, metrics["peak"])
-                hz = metrics["pitch_hz"]
-                pitch_frames.append({
-                    "time_seconds": round((len(pitch_frames) * window_frames) / rate, 3),
-                    "frequency_hz": round(hz, 2) if hz else None,
-                    "note": _pitch_name(hz),
-                    "confidence": round(metrics["pitch_confidence"], 3),
-                    "rms": round(metrics["rms"], 5),
-                })
+                if frame_count >= int(rate * 0.08):
+                    hz = metrics["pitch_hz"]
+                    pitch_frames.append({
+                        "time_seconds": round(analyzed_frames / rate, 3),
+                        "frequency_hz": round(hz, 2) if hz else None,
+                        "note": _pitch_name(hz),
+                        "confidence": round(metrics["pitch_confidence"], 3),
+                        "rms": round(metrics["rms"], 5),
+                    })
+                analyzed_frames += frame_count
 
             # Re-open for a lightweight 10 ms energy envelope used for rough tempo estimation.
         with wave.open(str(source), "rb") as wav:
@@ -140,7 +143,7 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
             "pitch_detected_frame_count": len(valid_pitches),
             "tempo_bpm": tempo,
             "tempo_confidence": tempo_confidence,
-            "analyzed_seconds": round(min(duration, len(pitch_frames) * window_frames / rate), 3),
+            "analyzed_seconds": round(analyzed_frames / rate, 3),
             "analysis_note": "音程とBPMは簡易推定です。特に伴奏のみ・和音を含む音源では誤判定することがあります。",
         }
     except AudioAnalysisError:
