@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const state={entries:new Map(),files:new Map(),rows:[],prefixMap:new Map(),audioUrl:null,archive:null};
-const MAX_ARCHIVE=1024*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
+const MAX_ARCHIVE=800*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
 const norm=s=>String(s||"").replace(/\\/g,"/").replace(/^\/+/,"");
 function parseOto(text,prefix){
  const rows=[],lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
@@ -22,7 +22,7 @@ async function inflateRaw(bytes){
  catch(e){throw Error("ZIPの圧縮方式を展開できません。通常のZIP形式か確認してください。");}
 }
 async function readZip(blob){
- if(blob.size>MAX_ARCHIVE)throw Error("ZIPは1GB以下のものを選択してください。");
+ if(blob.size>MAX_ARCHIVE)throw Error("ZIPは800MB以下のものを選択してください。");
  const tail=await blob.slice(Math.max(0,blob.size-65557)).arrayBuffer(),v=new DataView(tail);let end=-1;
  for(let i=tail.byteLength-22;i>=0;i--)if(v.getUint32(i,true)===0x06054b50){end=i;break;}
  if(end<0)throw Error("ZIPの目次が見つかりません。破損または非対応形式の可能性があります。");
