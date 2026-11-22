@@ -20,6 +20,18 @@ final class AudioAnalysisServiceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: url), original)
     }
 
+    func testStereoAntiPhaseAudioKeepsCorrectLevelMetrics() throws {
+        let url = try makeAudio(frequency: 220, amplitude: 0.5, seconds: 1.0, channels: 2, invertSecondChannel: true)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let result = try AudioAnalysisService.analyze(url: url)
+
+        XCTAssertEqual(result.channelCount, 2)
+        XCTAssertGreaterThan(result.peak, 0.45)
+        XCTAssertEqual(result.rms, 0.35, accuracy: 0.04)
+        XCTAssertTrue(result.pitchSamples.allSatisfy { $0.frequencyHz == nil })
+    }
+
     func testSilenceDoesNotProducePitch() throws {
         let url = try makeAudio(frequency: nil, amplitude: 0, seconds: 0.75)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -31,23 +43,26 @@ final class AudioAnalysisServiceTests: XCTestCase {
         XCTAssertTrue(result.pitchSamples.allSatisfy { $0.frequencyHz == nil })
     }
 
-    private func makeAudio(frequency: Double?, amplitude: Double, seconds: Double) throws -> URL {
+    private func makeAudio(frequency: Double?, amplitude: Double, seconds: Double, channels: AVAudioChannelCount = 1, invertSecondChannel: Bool = false) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("voicebankstudio-test-\(UUID().uuidString).caf")
         let format = try XCTUnwrap(AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: 16_000,
-            channels: 1,
+            channels: channels,
             interleaved: false
         ))
         let frameCount = AVAudioFrameCount(16_000 * seconds)
         let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount))
         buffer.frameLength = frameCount
-        let samples = try XCTUnwrap(buffer.floatChannelData?[0])
+        let channelData = try XCTUnwrap(buffer.floatChannelData)
 
         for frame in 0..<Int(frameCount) {
             let phase = 2 * Double.pi * (frequency ?? 0) * Double(frame) / 16_000
-            samples[frame] = Float(amplitude * sin(phase))
+            let sample = Float(amplitude * sin(phase))
+            for channel in 0..<Int(channels) {
+                channelData[channel][frame] = invertSecondChannel && channel == 1 ? -sample : sample
+            }
         }
 
         let file = try AVAudioFile(
