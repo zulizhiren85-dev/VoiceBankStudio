@@ -39,6 +39,7 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 270L * 1024 * 1024;
 });
 var app = builder.Build();
+app.UseRouting();
 app.UseCors("voicebankstudio");
 app.UseRateLimiter();
 
