@@ -66,7 +66,7 @@ const ANALYSIS_API='https://voicebankstudio-analysis-zulizhiren85.onrender.com';
 let uploadInProgress=false;
 async function uploadAudioFile(f,ask=true,onComplete=null){
   if(!f){$('analysis').textContent='ファイルが選択されていません。';if(onComplete)onComplete({ok:false,error:'ファイルが選択されていません。'});return}
-  if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
+  if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';if(onComplete)onComplete({ok:false,error:'対応していない形式です。'});return}
   if(f.size>100*1024*1024){$('analysis').textContent='サーバーへ送れる音源は100MB以下です。';if(onComplete)onComplete({ok:false,error:'100MBを超えています。'});return}
   if(f.size===0){$('analysis').textContent='ファイルサイズが0バイトです。別のファイルを選んでください。';if(onComplete)onComplete({ok:false,error:'ファイルサイズが0バイトです。'});return}
   if(uploadInProgress){if(onComplete)onComplete({ok:false,error:'別の解析が実行中です。'});return}
