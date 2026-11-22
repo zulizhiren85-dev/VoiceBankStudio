@@ -127,6 +127,11 @@ public static class VoicebankArchiveInspector
                 singer.Id,
                 singer.SingerType,
                 defaultPhonemizer = singer.DefaultPhonemizer,
+                prefixMapTests = new
+                {
+                    c4 = singer.TryGetMappedOto("あ", 60, out var c4Oto) ? c4Oto.Alias : null,
+                    c5 = singer.TryGetMappedOto("あ", 72, out var c5Oto) ? c5Oto.Alias : null,
+                },
                 otoCount = singer.Otos.Count,
                 phonemizerTests = new
                 {
