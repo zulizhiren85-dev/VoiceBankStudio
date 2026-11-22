@@ -112,6 +112,8 @@ public static class VoicebankArchiveInspector
             vcv.SetTiming(project.timeAxis);
             var vcvResult = vcv.Process(
                 new[] { secondNote }, firstNote, null, firstNote, null, Array.Empty<Phonemizer.Note>());
+            var cvResult = vcv.Process(
+                new[] { secondNote }, null, null, null, null, Array.Empty<Phonemizer.Note>());
 
             var cvvc = new JapaneseCVVCPhonemizer();
             cvvc.SetSinger(singer);
@@ -136,6 +138,7 @@ public static class VoicebankArchiveInspector
                 phonemizerTests = new
                 {
                     vcv = vcvResult.phonemes.Select(phoneme => phoneme.phoneme),
+                    cv = cvResult.phonemes.Select(phoneme => phoneme.phoneme),
                     cvvc = cvvcResult.phonemes.Select(phoneme => phoneme.phoneme),
                 },
                 aliases = singer.Otos.Take(30).Select(oto => new
