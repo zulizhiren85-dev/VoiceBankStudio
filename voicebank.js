@@ -135,12 +135,6 @@ async function sampleBuffer(path){
  if(decodedCache.size>48)decodedCache.delete(decodedCache.keys().next().value);
  return buffer;
 }
-function chooseRow(lyric,previous){
- const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous);
- const candidates=prev?[prev+" "+target,prev+target]:["- "+target,"-"+target];
- for(const alias of candidates){const r=state.rows.find(x=>x.alias.normalize("NFC")===alias);if(r)return r;}
- return state.rows.find(x=>x.alias.normalize("NFC")===target)||null;
-}
 async function playNotes(notes,options={}){
  if(!state.rows.length)throw Error("先にUTAU音源を読み込んでください。");
  if(!Array.isArray(notes)||!notes.length)throw Error("曲に音符がありません。");
