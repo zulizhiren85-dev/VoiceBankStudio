@@ -39,6 +39,26 @@ jobs:
             --configuration Release \
             -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
 
+
+      - name: Start HTTP service and verify endpoints
+        env:
+          ASPNETCORE_URLS: "http://127.0.0.1:5088"
+        run: |
+          dotnet run --project engine-dotnet/service/VoiceBankStudio.Service.csproj \
+            --no-build --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau" > /tmp/vbs-engine.log 2>&1 &
+          service_pid=$!
+          trap 'kill "$service_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5088/health; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1:5088/api/v1/engine/status | tee /tmp/vbs-engine-status.json
+          grep -q '"JapaneseVCVPhonemizer"' /tmp/vbs-engine-status.json
+          grep -q '"JapaneseCVVCPhonemizer"' /tmp/vbs-engine-status.json
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
