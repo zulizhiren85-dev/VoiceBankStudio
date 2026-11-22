@@ -56,8 +56,7 @@ jobs:
             sleep 2
           done
           curl --fail --silent http://127.0.0.1:5088/api/v1/engine/status | tee /tmp/vbs-engine-status.json
-          grep -q '"JapaneseVCVPhonemizer"' /tmp/vbs-engine-status.json
-          grep -q '"JapaneseCVVCPhonemizer"' /tmp/vbs-engine-status.json
+          grep -q '"phonemizersReady":true' /tmp/vbs-engine-status.json
 
       - name: Build and run Core/Builtin smoke test
         run: |
