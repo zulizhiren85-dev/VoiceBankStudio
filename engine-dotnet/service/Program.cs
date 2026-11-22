@@ -63,7 +63,6 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapGet("/api/v1/engine/status", () =>
 {
     var inspection = InspectPhonemizers();
-    var ready = inspection.Missing.Length == 0 && inspection.Error is null;
     return Results.Ok(new
     {
         service = serviceName,
@@ -77,7 +76,7 @@ app.MapGet("/api/v1/engine/status", () =>
         },
         singerLoadingReady = false,
         renderingReady = false,
-        readyForVoicebankRendering = ready && false,
+        phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
         note = "This endpoint verifies Core/Builtin assembly loading only. It does not load a voicebank or render audio.",
         error = inspection.Error,
     });
