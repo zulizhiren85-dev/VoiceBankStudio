@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using OpenUtau.Classic;
 
 namespace VoiceBankStudio.Engine;
@@ -18,10 +19,10 @@ public static class VoicebankRenderEndpoint
     };
 
     public static async Task<IResult> RenderAsync(
-        IFormFile archive,
-        string notesJson,
-        double bpm,
-        string? phonemizer,
+        [FromForm] IFormFile archive,
+        [FromForm] string notesJson,
+        [FromForm] double bpm,
+        [FromForm] string? phonemizer,
         HeadlessOpenUtauHost host,
         CancellationToken cancellationToken)
     {
