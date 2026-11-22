@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="service/**/*.cs" />
     <ProjectReference Include="$(OpenUtauSourcePath)/OpenUtau.Plugin.Builtin/OpenUtau.Plugin.Builtin.csproj" />
   </ItemGroup>
