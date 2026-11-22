@@ -22,7 +22,8 @@
 <div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ テスト再生</button><button id="voicePlay" class="primary">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">テスト曲に戻す</button></div>
 <p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符や重ねた音も作れます。</p></section>
 <section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAVなどの音声を端末内で簡易解析できます。端末内解析は通信なし。サーバー解析を使う場合のみ、確認後に音源を送信します（100MB以下・10分以内）。</p>
-<div class="toolbar"><label for="audioFile">音源ファイル</label><input id="audioFile" type="file" accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">選択した音源を読み込む</button><button id="analyze" disabled>端末内で簡易解析（通信なし）</button><button id="serverAnalyze" disabled>サーバー解析（通信あり）</button></div>
+<div class="toolbar"><label for="audioFile">音源ファイル（複数選択可）</label><input id="audioFile" type="file" multiple accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを複数選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">先頭の音源を読み込む</button><button id="analyze" disabled>端末内で簡易解析（通信なし）</button><button id="serverAnalyze" disabled>サーバー解析（通信あり）</button><button id="serverAnalyzeBatch" type="button" disabled>複数音源をまとめて解析</button></div>
+<div id="batchInfo" class="muted" style="margin-top:8px">複数ファイルを選ぶと、ここに一覧が表示されます。</div><div id="batchResults" class="status" style="margin-top:8px" aria-live="polite"></div>
 <div id="fileInfo" class="muted" style="margin-top:8px">まだ音源は選択されていません。</div><canvas id="wave" width="900" height="84"></canvas><audio id="audio" controls class="hidden"></audio>
 <div id="analysis" class="status" style="margin-top:10px">解析結果はここに表示されます。まずは音源を読み込んでください。</div><div class="toolbar" style="margin-top:8px"><button id="analysisToSong" disabled>解析結果からメロディを作る</button></div><p class="small">ベータ版：音程・Peak・RMS・テンポを簡易推定します。端末内解析は通信しません。サーバー解析は別途アップロード確認が必要です。</p></section>
 <section class="panel"><h2>③ URLから音源を取り込む</h2>
@@ -63,12 +64,12 @@ $('load').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=
 const audioPicker=$('audioFile');
 const ANALYSIS_API='https://voicebankstudio-analysis-zulizhiren85.onrender.com';
 let uploadInProgress=false;
-async function uploadAudioFile(f,ask=true){
-  if(!f){$('analysis').textContent='ファイルが選択されていません。';return}
+async function uploadAudioFile(f,ask=true,onComplete=null){
+  if(!f){$('analysis').textContent='ファイルが選択されていません。';if(onComplete)onComplete({ok:false,error:'ファイルが選択されていません。'});return}
   if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
-  if(f.size>100*1024*1024){$('analysis').textContent='サーバーへ送れる音源は100MB以下です。';return}
-  if(f.size===0){$('analysis').textContent='ファイルサイズが0バイトです。別のファイルを選んでください。';return}
-  if(uploadInProgress)return;
+  if(f.size>100*1024*1024){$('analysis').textContent='サーバーへ送れる音源は100MB以下です。';if(onComplete)onComplete({ok:false,error:'100MBを超えています。'});return}
+  if(f.size===0){$('analysis').textContent='ファイルサイズが0バイトです。別のファイルを選んでください。';if(onComplete)onComplete({ok:false,error:'ファイルサイズが0バイトです。'});return}
+  if(uploadInProgress){if(onComplete)onComplete({ok:false,error:'別の解析が実行中です。'});return}
   if(ask&&!window.confirm('選択した音源を解析サーバーへ送信します。通信量が発生します。音源は解析後にサーバーの一時ファイルから削除されます。送信しますか？'))return;
   uploadInProgress=true;
   const btn=$('serverAnalyze');btn.disabled=true;
@@ -88,14 +89,49 @@ async function uploadAudioFile(f,ask=true){
       const noteSummary=frames.slice(0,24).map(x=>x.time_seconds+'秒: '+x.note).join(' / ')||'有声音程を検出できませんでした';
       $('analysis').textContent='サーバー解析完了！\n長さ: '+r.duration_seconds+'秒\nサンプルレート: '+r.sample_rate+' Hz / '+r.channels+'ch\n推定BPM: '+(r.tempo_bpm||'未検出')+'（信頼度 '+r.tempo_confidence+'）\nPeak: '+r.peak+' / RMS: '+r.rms+'\n音程検出: '+(r.pitch_detected_frame_count||0)+' / '+(r.pitch_frame_count||0)+' 点\n音程サンプル: '+noteSummary+'\n\n'+r.analysis_note+'\n\nサーバー上の一時ファイルは処理終了後に削除されます。';
       $('fileInfo').textContent=f.name+' / サーバー解析済み';
-    }catch(err){$('analysis').textContent='サーバー解析エラー: '+(err.message||String(err))+'。別の対応形式の音源でも試せます。';}
+      if(onComplete)onComplete({ok:true,result:r});
+    }catch(err){$('analysis').textContent='サーバー解析エラー: '+(err.message||String(err))+'。別の対応形式の音源でも試せます。';if(onComplete)onComplete({ok:false,error:err.message||String(err)});}
     uploadInProgress=false;btn.disabled=false;
   };
-  xhr.onerror=()=>{$('analysis').textContent='サーバーに接続できませんでした。通信環境またはサーバーの状態を確認してください。';uploadInProgress=false;btn.disabled=false};
-  xhr.ontimeout=()=>{$('analysis').textContent='送信がタイムアウトしました。100MB以下・10分以内の対応音源で再度お試しください。';uploadInProgress=false;btn.disabled=false};
+  xhr.onerror=()=>{$('analysis').textContent='サーバーに接続できませんでした。通信環境またはサーバーの状態を確認してください。';if(onComplete)onComplete({ok:false,error:'サーバーに接続できませんでした。'});uploadInProgress=false;btn.disabled=false};
+  xhr.ontimeout=()=>{$('analysis').textContent='送信がタイムアウトしました。100MB以下・10分以内の対応音源で再度お試しください。';if(onComplete)onComplete({ok:false,error:'送信がタイムアウトしました。'});uploadInProgress=false;btn.disabled=false};
   xhr.send(data);
 }
 $('serverAnalyze').addEventListener('click',()=>{const f=audioPicker.files&&audioPicker.files[0];uploadAudioFile(f,true)});
+function selectedAudioFiles(){return Array.from(audioPicker.files||[])}
+function refreshBatchPicker(){
+ const files=selectedAudioFiles(),list=$('batchInfo'),btn=$('serverAnalyzeBatch');
+ btn.disabled=!files.length;
+ if(!files.length){list.textContent='複数ファイルを選ぶと、ここに一覧が表示されます。';return}
+ const total=files.reduce((n,f)=>n+f.size,0);
+ list.textContent='選択数：'+files.length+'件 / 合計 '+(total/1024/1024).toFixed(1)+' MB\\n'+files.map((f,i)=>(i+1)+'. '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB').join('\\n')+'\\n※複数解析は1ファイルずつ順番に送信します。通信量にご注意ください。';
+ $('serverAnalyze').disabled=false;
+}
+audioPicker.addEventListener('change',refreshBatchPicker);
+$('serverAnalyzeBatch').addEventListener('click',async()=>{
+ const files=selectedAudioFiles();
+ if(!files.length)return;
+ if(files.length>10){$('batchResults').textContent='一度に解析できるのは10ファイルまでです。ファイルを分けて選択してください。';return}
+ const total=files.reduce((n,f)=>n+f.size,0);
+ if(!window.confirm(files.length+'個の音源を1つずつサーバーへ送信します。合計 '+(total/1024/1024).toFixed(1)+' MB です。通信量が発生します。各ファイルは100MB以下・10分以内である必要があります。続けますか？'))return;
+ const batchBtn=$('serverAnalyzeBatch'),singleBtn=$('serverAnalyze');
+ batchBtn.disabled=true;singleBtn.disabled=true;
+ const summaries=[];
+ $('batchResults').textContent='複数音源の解析を開始します…';
+ for(let i=0;i<files.length;i++){
+   const f=files[i];
+   $('batchResults').textContent='解析中 '+(i+1)+' / '+files.length+'：'+f.name+'\\n'+summaries.join('\\n');
+   const outcome=await new Promise(resolve=>uploadAudioFile(f,false,resolve));
+   if(outcome.ok){
+     const r=outcome.result;
+     summaries.push('✓ '+f.name+' — '+r.duration_seconds+'秒 / BPM '+(r.tempo_bpm||'未検出')+' / Peak '+r.peak+' / RMS '+r.rms);
+   }else summaries.push('× '+f.name+' — '+outcome.error);
+   $('batchResults').textContent='進捗 '+(i+1)+' / '+files.length+'\\n'+summaries.join('\\n');
+ }
+ $('batchResults').textContent='複数音源の解析が完了しました。\\n'+summaries.join('\\n')+'\\n\\n各ファイルの詳しい音程データは、個別に選択して解析すると確認できます。';
+ batchBtn.disabled=false;singleBtn.disabled=false;
+});
+
 $('checkAudio').onclick=()=>{const ok=syncAudioPicker();if(!ok){$('fileInfo').textContent='iPadからファイル情報が届いていません。ファイル選択ボタンからWAVを選び直してください。';$('analysis').textContent='確認結果：audioFile.files が空です。';}else{$('analysis').textContent='確認結果：ファイル情報を受け取りました。送信または読み込みができます。';}};
 $('loadAudio').onclick=()=>{const f=(audioPicker.files&&audioPicker.files.length)?audioPicker.files[0]:null;$('fileInfo').textContent='読み込みボタンを押しました。ファイルを確認しています…';if(!f){$('fileInfo').textContent='ファイルがまだ渡されていません。上のファイル欄から選び直してください。';$('analysis').textContent='ファイル選択情報が見つかりません。';return}$('analysis').textContent='読み込み処理を開始しました: '+f.name;handleAudioSelection(f).catch(err=>{$('analysis').textContent='読み込み処理エラー: '+(err&&err.message?err.message:String(err));});};
 function syncAudioPicker(){const f=audioPicker.files&&audioPicker.files.length?audioPicker.files[0]:null;if(!f)return false;$('fileInfo').textContent='選択済み: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB。「選択した音源を読み込む」または「サーバーへ送って解析」を押してください。';$('analysis').textContent='ファイルを選択しました。';$('serverAnalyze').disabled=false;return true}
