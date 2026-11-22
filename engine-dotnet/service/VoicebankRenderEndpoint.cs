@@ -11,7 +11,6 @@ public static class VoicebankRenderEndpoint
     private const long MaxArchiveBytes = 256L * 1024 * 1024;
     private const long MaxExpandedBytes = 1024L * 1024 * 1024;
     private const int MaxEntries = 50000;
-    private static readonly SemaphoreSlim RenderGate = new(1, 1);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -32,7 +31,7 @@ public static class VoicebankRenderEndpoint
             return Results.BadRequest(new { error = "ZIPファイルは256MB以下にしてください。" });
         if (!string.IsNullOrWhiteSpace(phonemizer) && phonemizer != "ja-vcv" && phonemizer != "ja-cvvc")
             return Results.BadRequest(new { error = "対応する発音方式は ja-vcv / ja-cvvc です。" });
-        if (!await RenderGate.WaitAsync(0))
+        if (!await EngineWorkGate.Gate.WaitAsync(0))
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
 
         var jobRoot = Path.Combine(Path.GetTempPath(), "voicebankstudio-render", Guid.NewGuid().ToString("N"));
@@ -133,7 +132,7 @@ public static class VoicebankRenderEndpoint
             {
                 // Best-effort cleanup; temporary voicebank data is not retained intentionally.
             }
-            RenderGate.Release();
+            EngineWorkGate.Gate.Release();
         }
     }
 
