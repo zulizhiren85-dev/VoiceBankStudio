@@ -6,7 +6,9 @@ namespace VoiceBankStudio.Engine;
 public static class VoicebankArchiveCache
 {
     private static readonly object Sync = new();
-    private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(30);
+    // Render's free instance has ephemeral storage. Keep the test bank available
+    // across ordinary page reloads, while bounding retention to one archive.
+    private static readonly TimeSpan Lifetime = TimeSpan.FromHours(24);
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "voicebankstudio-bank-cache");
     private static string? currentId;
     private static string? currentPath;
@@ -37,7 +39,8 @@ public static class VoicebankArchiveCache
                 currentPath = path;
                 expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
             }
-            TryDelete(oldPath);
+            if (!string.Equals(oldPath, path, StringComparison.Ordinal))
+                TryDelete(oldPath);
             return Results.Ok(new { archiveId = id, expiresInMinutes = (int)Lifetime.TotalMinutes });
         }
         catch (OperationCanceledException)
@@ -54,6 +57,7 @@ public static class VoicebankArchiveCache
 
     public static bool TryGetPath(string? id, out string path)
     {
+        string? expiredPath = null;
         lock (Sync)
         {
             if (!string.IsNullOrWhiteSpace(id) &&
@@ -62,13 +66,23 @@ public static class VoicebankArchiveCache
                 File.Exists(currentPath) &&
                 DateTimeOffset.UtcNow < expiresAt)
             {
+                // Sliding expiration: active test sessions keep their bank cached.
                 expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
                 path = currentPath;
                 return true;
             }
+
+            if (currentPath is not null && DateTimeOffset.UtcNow >= expiresAt)
+            {
+                expiredPath = currentPath;
+                currentId = null;
+                currentPath = null;
+                expiresAt = DateTimeOffset.MinValue;
+            }
             path = string.Empty;
-            return false;
         }
+        TryDelete(expiredPath);
+        return false;
     }
 
     private static void TryDelete(string? path)
