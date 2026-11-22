@@ -66,9 +66,9 @@ jobs:
           root = "/tmp/vbs-fixture/Voicebank"
           os.makedirs(root, exist_ok=True)
           with open(os.path.join(root, "character.txt"), "w", encoding="ascii") as f:
-              f.write("name=VoiceBankStudio CI Fixture\\n")
+              f.write("name=VoiceBankStudio CI Fixture\n")
           with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
-              f.write("a.wav=あ,0,100,0,0,0\\n")
+              f.write("a.wav=あ,0,100,0,0,0\n")
           with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
               wav.setnchannels(1)
               wav.setsampwidth(2)
