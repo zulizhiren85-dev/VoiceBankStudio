@@ -28,7 +28,7 @@ async function readZip(blob){
  if(end<0)throw Error("ZIPの目次が見つかりません。破損または非対応形式の可能性があります。");
  const count=v.getUint16(end+10,true),size=v.getUint32(end+12,true),offset=v.getUint32(end+16,true);
  if(count===0xffff||size===0xffffffff||offset===0xffffffff)throw Error("64bit ZIPは現在未対応です。");
- if(count>MAX_ENTRIES)throw Error("ファイル数が多すぎます（上限30000件）。");
+ if(count>MAX_ENTRIES)throw Error("ファイル数が多すぎます（上限50000件）。");
  const cd=await blob.slice(offset,offset+size).arrayBuffer(),d=new DataView(cd),b=new Uint8Array(cd),decoder=new TextDecoder("utf-8"),entries=new Map();let p=0,total=0;
  for(let n=0;n<count;n++){
   if(d.getUint32(p,true)!==0x02014b50)throw Error("ZIPの目次データが不正です。");
@@ -105,7 +105,7 @@ async function sampleBuffer(path){
 }
 function chooseRow(lyric,previous){
  const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous);
- const candidates=prev?[prev+" "+target,prev+target]:[];
+ const candidates=prev?[prev+" "+target,prev+target]:["- "+target,"-"+target];
  for(const alias of candidates){const r=state.rows.find(x=>x.alias.normalize("NFC")===alias);if(r)return r;}
  return state.rows.find(x=>x.alias.normalize("NFC")===target)||null;
 }
