@@ -286,11 +286,28 @@ async function registerVoicebankArchive(archive,report){
   xhr.send(form);
  });
  registeredArchiveObject=archive;registeredArchiveId=result.archiveId;
- report('音源の初回登録が完了しました。次回からZIPの再送信は不要です（サーバー一時保存・最長24時間。利用中は期限を延長）。');
+ saveRegisteredVoicebank(archive,result.archiveId);
+ report('音源の初回登録が完了しました。次回から同じタブ内ではZIPの再送信は不要です（サーバー一時保存・最長24時間。利用中は期限を延長）。');
  return registeredArchiveId;
 }
 function createRenderForm(archiveId,songNotes,bpm){
  const form=new FormData();form.append('archiveId',archiveId);form.append('notesJson',JSON.stringify(songNotes));form.append('bpm',String(bpm));form.append('phonemizer',$('phonemizer').value);return form;
+}
+function voicebankSessionKey(archive){
+ return 'voicebankstudio.archive.'+[archive.name||'',archive.size,archive.lastModified||0].join(':');
+}
+function restoreRegisteredVoicebank(archive){
+ try{
+  const saved=sessionStorage.getItem(voicebankSessionKey(archive));
+  if(!saved)return false;
+  const record=JSON.parse(saved);
+  if(!record||typeof record.archiveId!=='string'||!record.archiveId)return false;
+  registeredArchiveObject=archive;registeredArchiveId=record.archiveId;
+  return true;
+ }catch(_){return false;}
+}
+function saveRegisteredVoicebank(archive,archiveId){
+ try{sessionStorage.setItem(voicebankSessionKey(archive),JSON.stringify({archiveId}));}catch(_){}
 }
 $('voicePlay').addEventListener('click',async()=>{
  stop();invalidateRenderedAudio();
@@ -313,10 +330,11 @@ $('voicePlay').addEventListener('click',async()=>{
   if(songNotes.some(n=>n.tone<24||n.tone>108||n.duration<30||n.duration>7680||n.position>200000))throw Error('音程・長さ・開始位置が歌唱エンジンの対応範囲外です。');
   const orderedNotes=[...songNotes].sort((a,b)=>a.position-b.position);
   for(let i=1;i<orderedNotes.length;i++){if(orderedNotes[i].position<orderedNotes[i-1].position+orderedNotes[i-1].duration)throw Error('現在は音符の重なりに未対応です。開始拍をずらして単旋律にしてください。');}
-  if(registeredArchiveObject!==archive||!registeredArchiveId)await registerVoicebankArchive(archive,report);
+  if((registeredArchiveObject!==archive||!registeredArchiveId)&&!restoreRegisteredVoicebank(archive))await registerVoicebankArchive(archive,report);
   report(songNotes.length+' 音の譜面をOpenUtauへ送信しています（音源ZIPの再送信なし）…');
   let response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/render',{method:'POST',body:createRenderForm(registeredArchiveId,songNotes,bpm)});
   if(response.status===404){
+   try{sessionStorage.removeItem(voicebankSessionKey(archive));}catch(_){}
    registeredArchiveId=null;registeredArchiveObject=null;
    await registerVoicebankArchive(archive,report);
    report('音源を再登録しました。譜面をレンダリングしています…');
