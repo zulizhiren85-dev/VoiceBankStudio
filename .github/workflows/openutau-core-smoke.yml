@@ -95,6 +95,20 @@ jobs:
           print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
           PY
 
+
+      - name: Reject ZIP path traversal
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("/tmp/vbs-malicious.zip", "w") as z:
+              z.writestr("../outside.txt", "must not be extracted")
+          PY
+          status=$(curl --silent --output /tmp/vbs-malicious-result.json --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-malicious.zip" \
+            http://127.0.0.1:5088/api/v1/voicebanks/inspect)
+          test "$status" = "400"
+          test ! -e /tmp/outside.txt
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
