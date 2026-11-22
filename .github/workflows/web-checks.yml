@@ -22,13 +22,23 @@ jobs:
           node-version: "22"
       - name: Check JavaScript syntax
         run: node --check voicebank.js
+      - name: Check inline app JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("index.html").read_text(encoding="utf-8")
+          start = html.index("<script>") + len("<script>")
+          end = html.index("</script>", start)
+          Path("/tmp/voicebankstudio-inline.js").write_text(html[start:end], encoding="utf-8")
+          PY
+          node --check /tmp/voicebankstudio-inline.js
       - name: Check required beta UI hooks
         run: |
           python - <<'PY'
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
           js = Path("voicebank.js").read_text(encoding="utf-8")
-          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=97e9fd5\"", "id=\"voicePlay\"", "id=\"analysisToSong\""]
+          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=76e84bc\"", "id=\"voicePlay\"", "id=\"analysisToSong\""]
           required_js = ["oto.ini", "preutterance", "overlap", "DecompressionStream", "webkitRelativePath", "playNotes", "VoiceBankStudioVoicebank"]
           missing = [item for item in required_html if item not in html] + [item for item in required_js if item not in js]
           if missing:
