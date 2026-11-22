@@ -1,0 +1,25 @@
+name: iPad Audio Core
+
+on:
+  push:
+    paths:
+      - "Sources/VoiceBankStudio/Audio/**"
+      - "Tests/VoiceBankStudioAudioTests/**"
+      - "Package.swift"
+      - ".github/workflows/ipad-audio-core.yml"
+  pull_request:
+    paths:
+      - "Sources/VoiceBankStudio/Audio/**"
+      - "Tests/VoiceBankStudioAudioTests/**"
+      - "Package.swift"
+      - ".github/workflows/ipad-audio-core.yml"
+
+jobs:
+  swift-audio-core:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Swift version
+        run: swift --version
+      - name: Build and test local audio core
+        run: swift test

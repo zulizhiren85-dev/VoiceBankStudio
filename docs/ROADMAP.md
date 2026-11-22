@@ -10,9 +10,12 @@ Each stage must be tested before moving to the next. Existing SwiftUI source and
 
 ## Phase 1 — Audio analysis (current priority)
 
-- Import local WAV audio without modifying the original.
+- Import local audio through the native iPad document picker without modifying the original.
+- Copy selected source media into app-managed storage and preserve the original import.
+- Play imported audio locally through AVFoundation.
+- Analyze audio in bounded AVAudioFile buffers without uploading it or loading the entire recording into memory.
 - Inspect format, duration, sample rate, channel count, and audio level.
-- Build a time-based pitch estimate with note names and confidence values.
+- Build a time-based pitch estimate with note names and confidence values (initial native prototype uses approximately 0.5-second windows).
 - Estimate BPM and rhythmic pulse from the audio envelope.
 - Display all analysis as provisional, editable suggestions.
 - Distinguish vocal, instrumental, and mixed audio where possible; do not claim reliable classification until validated.
@@ -20,7 +23,7 @@ Each stage must be tested before moving to the next. Existing SwiftUI source and
 - Process long audio in bounded chunks; provide progress, cancellation, and recovery.
 - Keep all core processing local and offline.
 
-**Current implementation:** Python WAV PCM reader, optional native C DSP extension, pure-Python fallback, pitch-window timeline, rough BPM estimate, and automated tests. This is an early analysis foundation, not full song transcription. Chord analysis, accurate polyphonic melody extraction, vocal separation, and a user-facing iPad analysis screen are not yet implemented.
+**Current implementation:** Python WAV PCM reader, optional native C DSP extension, pure-Python fallback, pitch-window timeline, rough BPM estimate, and automated tests. Native SwiftUI source now includes local file import, playback, bounded AVAudioFile reading, Peak/RMS, and provisional pitch-window display. The native Swift source has not yet been built or verified on a physical iPad. This is an early analysis foundation, not full song transcription. Chord analysis, accurate polyphonic melody extraction, vocal separation, robust BPM analysis in the native app, and a validated iPad release are not yet implemented.
 
 **Completion goal:** A user can select a WAV, run local analysis, inspect approximate pitch and tempo results, and correct or reject them.
 

@@ -2,48 +2,63 @@
 
 An iPad-focused UTAU voicebank and singing-production app.
 
-## Development direction
+## Current development direction
 
-The project is moving toward a Python-first application core with a native C audio-processing module. The existing SwiftUI source and GitHub Pages prototype are being preserved while the new engine is built and validated.
+VoiceBankStudio is now being developed as an **iPad-local-first application**. Audio import, playback, analysis, voicebank inspection, and eventually singing synthesis should work on the device without requiring a server. Cloud/server features remain optional support tools and must never be required for the basic workflow.
 
-- **Python:** application logic, project data, WAV handling, and analysis orchestration.
-- **C:** performance-sensitive PCM processing and signal analysis.
-- **iPad integration:** package the Python runtime and compile the C module for iOS after the engine has a reliable test foundation.
+- **SwiftUI + AVFoundation:** native iPad interface, local media import, playback, and device-side audio processing.
+- **Python + C:** portable reference/analysis engine and a foundation for algorithm validation. It is not assumed to run inside Safari.
+- **Future UTAU engine:** investigate OpenUtau Core and its dependencies after the basic local app and audio pipeline are stable.
+- **Browser prototype:** preserved for reference and lightweight testing; it is not the primary iPad runtime.
 
-The GitHub Pages version is a browser prototype. It does not execute the native Python/C engine.
+## Implemented native iPad source (not yet device-verified)
 
-## Current Python/C engine milestone
+The SwiftUI source currently includes:
+- Local audio file import through the iOS document picker.
+- A private app Documents copy that preserves the original selected file.
+- Local playback through AVAudioPlayer.
+- Chunked AVAudioFile analysis without loading the complete source recording into memory.
+- Peak and RMS measurement.
+- A rough pitch estimate per approximately 0.5-second chunk, with note names and confidence values.
+- A simple analysis result view.
 
-The engine/ directory currently contains:
+**Important:** these Swift files have been added/updated, but an iPad build and on-device test have not yet been completed. Treat the pitch estimate as provisional; it is not melody transcription. Tempo estimation, multi-pitch/chord analysis, vocal separation, voicebank import, and UTAU synthesis are not yet part of this native screen.
 
+## Existing Python/C engine
+
+The `engine/` directory contains:
 - WAV PCM inspection for 8/16/24/32-bit integer samples.
 - Duration, sample rate, channel count, peak, and RMS measurement.
-- A rough single-pitch estimate from up to the first second.
-- A pure-Python fallback when the C extension is not compiled.
+- Rough monophonic pitch estimates and a basic tempo estimate.
+- A pure-Python fallback and an optional native C DSP extension.
 - Automated tests and a GitHub Actions build/test workflow.
 
-This is an early engine foundation, not yet a finished iPad app. The pitch estimate is not melody transcription; chord analysis, vocal separation, UTAU synthesis, and the iPad interface integration remain future work.
+This engine is a tested reference foundation, not a finished iPad integration. The Python runtime and C extension still need a deliberate iOS packaging/build strategy if we choose to embed them later.
 
 ## Project principles
 
-- Local-first: source audio and projects stay on the device.
+- Local-first: source audio, voicebanks, and projects stay on the device by default.
 - No audio uploads by default.
 - Network features are optional and Wi-Fi-only.
-- Preserve original audio; analysis is provisional and editable.
-- Keep processing bounded and suitable for iPad memory and battery limits.
-- Beginner-friendly controls first, advanced controls later.
+- Preserve original audio and voicebank files; edits are non-destructive.
+- Process long media in bounded chunks and expose progress/cancellation.
+- Keep processing bounded for iPad memory, battery, and thermal limits.
+- Make automatic analysis provisional and editable.
+- Build and test one stage at a time.
 
 ## Existing source
 
-- Sources/VoiceBankStudio/ — existing SwiftUI app source, preserved for later iPad integration.
-- engine/ — Python package and C audio-processing module.
-- docs/ — architecture and development roadmap.
-- index.html — earlier GitHub Pages browser prototype.
+- `Sources/VoiceBankStudio/` — SwiftUI iPad app source.
+- `engine/` — Python package and C audio-processing module.
+- `docs/` — architecture and development roadmap.
+- `index.html` — earlier GitHub Pages browser prototype.
+- `engine-dotnet/` — experimental OpenUtau-based server engine, preserved separately while the local-first direction is developed.
 
-## Next milestones
+## Development order
 
-1. Validate the Python/C WAV engine in CI.
-2. Add reliable file import and project metadata.
-3. Expand pitch and tempo analysis in short, resumable chunks.
-4. Design the iPad runtime integration.
-5. Continue with editable notes/lyrics, voicebank assignment, synthesis, and mixing.
+1. Complete and validate native local audio import, playback, and analysis.
+2. Implement local voicebank ZIP/folder import and safe oto.ini/prefix.map inspection.
+3. Build local song/project data and note/lyric editing.
+4. Implement and validate local sample playback and UTAU-compatible synthesis.
+5. Only after the basic application is stable, evaluate and integrate portable parts of OpenUtau Core.
+6. Keep optional server functionality separate from the offline core.
