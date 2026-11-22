@@ -86,7 +86,7 @@ async function uploadAudioFile(f,ask=true){
       if(xhr.status<200||xhr.status>=300)throw new Error(r.detail||('HTTP '+xhr.status));
       const frames=(r.pitch_frames||[]).filter(x=>x.note);lastAnalysisFrames=frames.map(x=>({time_seconds:Number(x.time_seconds)||0,note:String(x.note)}));lastAnalysisTempo=Number(r.tempo_bpm)||null;$('analysisToSong').disabled=!lastAnalysisFrames.length;
       const noteSummary=frames.slice(0,24).map(x=>x.time_seconds+'秒: '+x.note).join(' / ')||'有声音程を検出できませんでした';
-      $('analysis').textContent='サーバー解析完了！\n長さ: '+r.duration_seconds+'秒\nサンプルレート: '+r.sample_rate+' Hz / '+r.channels+'ch\n推定BPM: '+(r.tempo_bpm||'未検出')+'（信頼度 '+r.tempo_confidence+'）\n音程サンプル: '+noteSummary+'\n\n'+r.analysis_note+'\n\nサーバー上の一時ファイルは処理終了後に削除されます。';
+      $('analysis').textContent='サーバー解析完了！\n長さ: '+r.duration_seconds+'秒\nサンプルレート: '+r.sample_rate+' Hz / '+r.channels+'ch\n推定BPM: '+(r.tempo_bpm||'未検出')+'（信頼度 '+r.tempo_confidence+'）\nPeak: '+r.peak+' / RMS: '+r.rms+'\n音程検出: '+(r.pitch_detected_frame_count||0)+' / '+(r.pitch_frame_count||0)+' 点\n音程サンプル: '+noteSummary+'\n\n'+r.analysis_note+'\n\nサーバー上の一時ファイルは処理終了後に削除されます。';
       $('fileInfo').textContent=f.name+' / サーバー解析済み';
     }catch(err){$('analysis').textContent='サーバー解析エラー: '+(err.message||String(err))+'。別の対応形式の音源でも試せます。';}
     uploadInProgress=false;btn.disabled=false;
