@@ -118,6 +118,7 @@ public static class VoicebankArchiveInspector
                 singer.Name,
                 singer.Id,
                 singer.SingerType,
+                defaultPhonemizer = singer.DefaultPhonemizer,
                 otoCount = singer.Otos.Count,
                 phonemizerTests = new
                 {
