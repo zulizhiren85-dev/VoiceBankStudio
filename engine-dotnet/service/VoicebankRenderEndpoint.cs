@@ -24,9 +24,10 @@ public static class VoicebankRenderEndpoint
         [FromForm] double bpm,
         [FromForm] string? phonemizer,
         [FromServices] HeadlessOpenUtauHost host,
-        [FromServices] ILogger<VoicebankRenderEndpoint> logger,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
+        var logger = loggerFactory.CreateLogger("VoiceBankStudio.Engine.RenderEndpoint");
         logger.LogInformation("Render request accepted. ArchiveIdPresent={ArchiveIdPresent}, UploadedArchive={UploadedArchive}, NotesJsonLength={NotesJsonLength}", !string.IsNullOrWhiteSpace(archiveId), archive is not null, notesJson?.Length ?? 0);
         string? cachedArchivePath = null;
         if (archive is null)
