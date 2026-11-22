@@ -88,7 +88,6 @@ public static class VoicebankArchiveInspector
                 singer.Name,
                 singer.Id,
                 singer.SingerType,
-                singer.Location,
                 otoCount = singer.Otos.Count,
                 aliases = singer.Otos.Take(30).Select(oto => new
                 {
@@ -115,7 +114,7 @@ public static class VoicebankArchiveInspector
         }
         catch (Exception ex)
         {
-            return Results.Problem("音源の読み込みに失敗しました。", detail: ex.GetType().Name + ": " + ex.Message, statusCode: 422);
+            return Results.Problem(title: "音源の読み込みに失敗しました。", detail: ex.GetType().Name + ": " + ex.Message, statusCode: 422);
         }
         finally
         {
