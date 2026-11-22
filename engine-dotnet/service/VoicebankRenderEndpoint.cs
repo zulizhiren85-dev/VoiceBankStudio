@@ -24,8 +24,10 @@ public static class VoicebankRenderEndpoint
         [FromForm] double bpm,
         [FromForm] string? phonemizer,
         [FromServices] HeadlessOpenUtauHost host,
+        [FromServices] ILogger<VoicebankRenderEndpoint> logger,
         CancellationToken cancellationToken)
     {
+        logger.LogInformation("Render request accepted. ArchiveIdPresent={ArchiveIdPresent}, UploadedArchive={UploadedArchive}, NotesJsonLength={NotesJsonLength}", !string.IsNullOrWhiteSpace(archiveId), archive is not null, notesJson?.Length ?? 0);
         string? cachedArchivePath = null;
         if (archive is null)
         {
@@ -94,6 +96,7 @@ public static class VoicebankRenderEndpoint
                 }
             }
 
+            logger.LogInformation("Voicebank ZIP extraction completed. Entries={EntryCount}, ExpandedBytes={ExpandedBytes}", entries, expandedBytes);
             var characterFiles = Directory.EnumerateFiles(extractRoot, "character.txt", SearchOption.AllDirectories)
                 .Take(2).ToArray();
             if (characterFiles.Length != 1)
@@ -105,31 +108,39 @@ public static class VoicebankRenderEndpoint
             if (noteList is null || noteList.Count is < 1 or > 500)
                 return Results.BadRequest(new { error = "歌詞・音程データは1〜500音符で指定してください。" });
 
+            logger.LogInformation("Voicebank metadata located. Starting OpenUtau voicebank load.");
             var bank = new Voicebank();
             VoicebankLoader.LoadInfo(bank, characterFiles[0], extractRoot);
             if (bank.SingerType != OpenUtau.Core.Ustx.USingerType.Classic)
                 return Results.BadRequest(new { error = "現在のベータ版は通常のUTAU音源（Classic）に対応しています。ENUNU / DiffSinger等は対象外です。" });
 
+            logger.LogInformation("Voicebank metadata loaded. Loading singer samples. OtoCount={OtoCount}", bank.Oto.Count);
             using var singer = new ClassicSinger(bank);
             singer.EnsureLoaded();
+            logger.LogInformation("Singer sample loading finished. Loaded={Loaded}, OtoCount={OtoCount}, ErrorCount={ErrorCount}", singer.Loaded, singer.Otos.Count, singer.Errors.Count);
             if (!singer.Loaded || singer.Otos.Count == 0)
                 return Results.Problem(title: "UTAU音源を読み込めませんでした。", detail: string.Join("\n", singer.Errors), statusCode: 422);
 
             var selectedPhonemizer = phonemizer == "ja-cvvc" ? "ja-cvvc" : "ja-vcv";
+            logger.LogInformation("Calling headless OpenUtau renderer. Notes={NoteCount}, Phonemizer={Phonemizer}", noteList.Count, selectedPhonemizer);
             var samples = await host.RenderAsync(singer, noteList, selectedPhonemizer, bpm, cancellationToken);
+            logger.LogInformation("Headless OpenUtau renderer returned. Samples={SampleCount}", samples.Length);
             var wav = ToMono16Wav(samples, 44100);
             return Results.File(wav, "audio/wav", "VoiceBankStudio-render.wav");
         }
         catch (InvalidDataException ex)
         {
+            logger.LogWarning(ex, "Voicebank ZIP data was invalid.");
             return Results.BadRequest(new { error = "ZIPを読み取れませんでした。", detail = ex.Message });
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
+            logger.LogWarning(ex, "Render request was cancelled.");
             return Results.Problem("歌唱レンダリングがキャンセルされました。", statusCode: 499);
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Render endpoint failed.");
             return Results.Problem(title: "歌唱レンダリングに失敗しました。",
                 detail: ex.GetType().Name + ": " + ex.Message, statusCode: 422);
         }
