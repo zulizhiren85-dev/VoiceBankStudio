@@ -102,7 +102,14 @@ public static class VoicebankArchiveInspector
             vcv.SetSinger(singer);
             vcv.SetUp(new[] { new[] { note } }, project, project.tracks[0]);
             vcv.SetTiming(project.timeAxis);
-            var phonemized = vcv.Process(
+            var vcvResult = vcv.Process(
+                new[] { note }, null, null, null, null, Array.Empty<Phonemizer.Note>());
+
+            var cvvc = new JapaneseCVVCPhonemizer();
+            cvvc.SetSinger(singer);
+            cvvc.SetUp(new[] { new[] { note } }, project, project.tracks[0]);
+            cvvc.SetTiming(project.timeAxis);
+            var cvvcResult = cvvc.Process(
                 new[] { note }, null, null, null, null, Array.Empty<Phonemizer.Note>());
 
             return Results.Ok(new
@@ -112,7 +119,11 @@ public static class VoicebankArchiveInspector
                 singer.Id,
                 singer.SingerType,
                 otoCount = singer.Otos.Count,
-                vcvPhonemesForTestNote = phonemized.phonemes.Select(phoneme => phoneme.phoneme),
+                phonemizerTests = new
+                {
+                    vcv = vcvResult.phonemes.Select(phoneme => phoneme.phoneme),
+                    cvvc = cvvcResult.phonemes.Select(phoneme => phoneme.phoneme),
+                },
                 aliases = singer.Otos.Take(30).Select(oto => new
                 {
                     alias = oto.Alias,
@@ -125,7 +136,7 @@ public static class VoicebankArchiveInspector
                 }),
                 errors = singer.Errors,
                 extractedBytes = expandedBytes,
-                note = "OpenUtau VoicebankLoader / ClassicSingerによる音源読み込み確認です。VCV音素変換まで確認しています。歌唱レンダリングはまだ行っていません。",
+                note = "OpenUtau VoicebankLoader / ClassicSingerによる音源読み込み確認です。VCV・CVVC音素変換まで確認しています。歌唱レンダリングはまだ行っていません。",
             });
         }
         catch (InvalidDataException ex)
