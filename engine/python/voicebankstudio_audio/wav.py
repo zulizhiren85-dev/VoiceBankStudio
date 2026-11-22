@@ -83,6 +83,9 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
 
             duration = frames_total / rate
             pitch_frames = []
+            total_rms_sq = 0.0
+            total_metric_samples = 0
+            global_peak = 0.0
             window_frames = max(256, int(rate * pitch_window_seconds))
             # Sequential windows keep peak memory bounded even for long recordings.
             while True:
@@ -93,6 +96,12 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
                 if frame_count < int(rate * 0.08):
                     break
                 metrics = analyze_pcm(raw, rate, channels, width)
+                # Aggregate whole-file level statistics instead of reporting only
+                # the first pitch window. Weight RMS by the number of source frames.
+                metric_samples = frame_count
+                total_rms_sq += (metrics["rms"] ** 2) * metric_samples
+                total_metric_samples += metric_samples
+                global_peak = max(global_peak, metrics["peak"])
                 hz = metrics["pitch_hz"]
                 pitch_frames.append({
                     "time_seconds": round((len(pitch_frames) * window_frames) / rate, 3),
@@ -115,6 +124,7 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
 
         first = pitch_frames[0] if pitch_frames else {}
         valid_pitches = [x["frequency_hz"] for x in pitch_frames if x["frequency_hz"]]
+        whole_file_rms = math.sqrt(total_rms_sq / total_metric_samples) if total_metric_samples else 0.0
         return {
             "file_name": source.name,
             "format": "WAV PCM",
@@ -122,8 +132,8 @@ def analyze_wav(path: str | Path, pitch_window_seconds: float = 0.25) -> dict:
             "sample_rate": rate,
             "channels": channels,
             "sample_width_bytes": width,
-            "peak": None,
-            "rms": first.get("rms", 0.0),
+            "peak": round(global_peak, 5),
+            "rms": round(whole_file_rms, 5),
             "pitch_hz": first.get("frequency_hz", 0.0) or 0.0,
             "pitch_frames": pitch_frames,
             "pitch_frame_count": len(pitch_frames),
