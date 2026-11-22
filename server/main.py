@@ -64,8 +64,8 @@ def convert_to_analysis_wav(source_path: str, output_path: str) -> float:
                     nonlocal total_samples
                     for frame in frames:
                         # s16 + mono is packed PCM; read the PyAV plane directly so NumPy is not required.
-                        pcm_bytes = memoryview(frame.planes[0]).tobytes()
-                        sample_count = len(pcm_bytes) // 2
+                        pcm_bytes = memoryview(frame.planes[0]).tobytes()[: frame.samples * 2]
+                        sample_count = frame.samples
                         total_samples += sample_count
                         if total_samples > MAX_DURATION_SECONDS * OUTPUT_RATE:
                             raise OverflowError("音源は3分以内にしてください。")
