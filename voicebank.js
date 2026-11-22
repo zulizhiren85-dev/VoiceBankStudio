@@ -33,7 +33,7 @@ async function readZip(blob){
  for(let n=0;n<count;n++){
   if(d.getUint32(p,true)!==0x02014b50)throw Error("ZIPの目次データが不正です。");
   const flags=d.getUint16(p+8,true),method=d.getUint16(p+10,true),csize=d.getUint32(p+20,true),usize=d.getUint32(p+24,true),nl=d.getUint16(p+28,true),el=d.getUint16(p+30,true),cl=d.getUint16(p+32,true),local=d.getUint32(p+42,true);
-  const name=norm(decoder.decode(b.slice(p+46,p+46+nl)));
+  const nameBytes=b.slice(p+46,p+46+nl),name=norm(new TextDecoder((flags&0x800)?"utf-8":"shift_jis").decode(nameBytes));
   if(name&&!name.endsWith("/")){
    if(name.split("/").some(x=>x===".."||x==="."))throw Error("不正なファイルパスを含むZIPです。");
    if(flags&1)throw Error("暗号化ZIPには対応していません。");
@@ -76,11 +76,11 @@ async function loadFiles(files,mode){
  if(mode==="zip"){
   state.archive=list[0];state.entries=await readZip(list[0]);const oto=[...state.entries.values()].filter(e=>e.name.toLowerCase().endsWith("oto.ini"));
   if(!oto.length)throw Error("ZIP内にoto.iniが見つかりません。音源フォルダごとZIPにしてください。");
-  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます。");const txt=await(await zipFile(e)).text(),dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
+  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます。");const raw=await(await zipFile(e)).arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}const dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
  }else{
   for(const f of list){const path=norm(f.webkitRelativePath||f.name);if(path.toLowerCase().endsWith(".wav"))state.files.set(path,f);}
   const oto=list.filter(f=>f.name.toLowerCase()==="oto.ini");if(!oto.length)throw Error("選択フォルダ内にoto.iniが見つかりません。音源の一番上のフォルダを選択してください。");
-  for(const f of oto){const path=norm(f.webkitRelativePath||f.name),dir=path.slice(0,path.lastIndexOf("/")+1);state.rows.push(...parseOto(await f.text(),dir));}
+  for(const f of oto){const path=norm(f.webkitRelativePath||f.name),dir=path.slice(0,path.lastIndexOf("/")+1),raw=await f.arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}state.rows.push(...parseOto(txt,dir));}
  }
  if(!state.rows.length)throw Error("oto.iniは見つかりましたが、有効な設定行がありません。");
  const missing=state.rows.filter(r=>!state.files.has(r.file)&&!state.entries.has(r.file)).length;render();
