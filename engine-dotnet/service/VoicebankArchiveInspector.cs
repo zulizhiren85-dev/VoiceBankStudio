@@ -90,7 +90,7 @@ public static class VoicebankArchiveInspector
             singer.EnsureLoaded();
 
             var project = new UProject();
-            var note = new Phonemizer.Note
+            var firstNote = new Phonemizer.Note
             {
                 lyric = "あ",
                 tone = 60,
@@ -98,19 +98,27 @@ public static class VoicebankArchiveInspector
                 duration = 480,
                 phonemeAttributes = Array.Empty<Phonemizer.PhonemeAttributes>(),
             };
+            var secondNote = new Phonemizer.Note
+            {
+                lyric = "か",
+                tone = 60,
+                position = 480,
+                duration = 480,
+                phonemeAttributes = Array.Empty<Phonemizer.PhonemeAttributes>(),
+            };
             var vcv = new JapaneseVCVPhonemizer();
             vcv.SetSinger(singer);
-            vcv.SetUp(new[] { new[] { note } }, project, project.tracks[0]);
+            vcv.SetUp(new[] { new[] { firstNote, secondNote } }, project, project.tracks[0]);
             vcv.SetTiming(project.timeAxis);
             var vcvResult = vcv.Process(
-                new[] { note }, null, null, null, null, Array.Empty<Phonemizer.Note>());
+                new[] { secondNote }, firstNote, null, firstNote, null, Array.Empty<Phonemizer.Note>());
 
             var cvvc = new JapaneseCVVCPhonemizer();
             cvvc.SetSinger(singer);
-            cvvc.SetUp(new[] { new[] { note } }, project, project.tracks[0]);
+            cvvc.SetUp(new[] { new[] { firstNote, secondNote } }, project, project.tracks[0]);
             cvvc.SetTiming(project.timeAxis);
             var cvvcResult = cvvc.Process(
-                new[] { note }, null, null, null, null, Array.Empty<Phonemizer.Note>());
+                new[] { firstNote }, null, secondNote, null, secondNote, Array.Empty<Phonemizer.Note>());
 
             return Results.Ok(new
             {
