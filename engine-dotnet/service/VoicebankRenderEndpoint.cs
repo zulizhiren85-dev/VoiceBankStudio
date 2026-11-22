@@ -30,6 +30,8 @@ public static class VoicebankRenderEndpoint
             return Results.BadRequest(new { error = "UTAU音源ZIPを選択してください。" });
         if (archive.Length > MaxArchiveBytes)
             return Results.BadRequest(new { error = "ZIPファイルは256MB以下にしてください。" });
+        if (!string.IsNullOrWhiteSpace(phonemizer) && phonemizer != "ja-vcv" && phonemizer != "ja-cvvc")
+            return Results.BadRequest(new { error = "対応する発音方式は ja-vcv / ja-cvvc です。" });
         if (!await RenderGate.WaitAsync(0))
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
 
