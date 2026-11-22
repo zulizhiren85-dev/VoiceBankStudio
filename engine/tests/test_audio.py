@@ -45,6 +45,26 @@ class AudioAnalysisTests(unittest.TestCase):
             self.assertAlmostEqual(result["pitch_hz"], 220.0, delta=8.0)
             self.assertGreaterEqual(result["pitch_frame_count"], 1)
 
+    def test_peak_and_rms_cover_the_entire_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "changing_level.wav"
+            frames = bytearray()
+            rate = 16000
+            for index in range(rate):
+                amplitude = 0.1 if index < rate // 2 else 0.8
+                sample = int(amplitude * 32767 * math.sin(2 * math.pi * 220 * index / rate))
+                frames.extend(sample.to_bytes(2, "little", signed=True))
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(1)
+                wav.setsampwidth(2)
+                wav.setframerate(rate)
+                wav.writeframes(frames)
+
+            result = analyze_wav(path)
+            self.assertGreater(result["peak"], 0.75)
+            self.assertGreater(result["rms"], 0.35)
+            self.assertLess(result["rms"], 0.45)
+
     def test_estimates_click_track_tempo(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "click.wav"
