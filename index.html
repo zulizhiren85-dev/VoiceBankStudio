@@ -80,7 +80,7 @@ $('serverAnalyze').addEventListener('click',()=>{
   xhr.onerror=()=>{$('analysis').textContent='サーバーに接続できませんでした。サーバーの公開状態と通信環境を確認してください。';btn.disabled=false};
   xhr.send(data);
 });
-$('loadAudio').addEventListener('click',()=>{const f=(audioPicker.files&&audioPicker.files[0])||null;if(!f){$('fileInfo').textContent='ファイルがまだ渡されていません。上のファイル欄から選び直してください。';$('analysis').textContent='音源ファイルを確認できません。ファイル欄で選択後、「選択した音源を読み込む」を押してください。';return}handleAudioSelection(f)});
+$('loadAudio').onclick=()=>{const f=(audioPicker.files&&audioPicker.files.length)?audioPicker.files[0]:null;$('fileInfo').textContent='読み込みボタンを押しました。ファイルを確認しています…';if(!f){$('fileInfo').textContent='ファイルがまだ渡されていません。上のファイル欄から選び直してください。';$('analysis').textContent='ファイル選択情報が見つかりません。';return}$('analysis').textContent='読み込み処理を開始しました: '+f.name;handleAudioSelection(f).catch(err=>{$('analysis').textContent='読み込み処理エラー: '+(err&&err.message?err.message:String(err));});};
 function syncAudioPicker(){const f=audioPicker.files&&audioPicker.files.length?audioPicker.files[0]:null;if(!f)return false;$('fileInfo').textContent='選択済み: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB。「選択した音源を読み込む」または「サーバーへ送って解析」を押してください。';$('analysis').textContent='ファイルを選択しました。';$('serverAnalyze').disabled=false;return true}
 function onAudioPickerChanged(){if(!syncAudioPicker()){$('fileInfo').textContent='ファイル選択画面から戻りました。ファイルが選択されているか確認してください。'}}
 audioPicker.addEventListener('change',onAudioPickerChanged);
