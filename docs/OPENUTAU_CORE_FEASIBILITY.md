@@ -44,7 +44,7 @@ The OpenUtau repository's top-level license is MIT. That does not automatically 
 
 ## Risks that must be tested
 
-1. **Headless initialization:** Core code references global managers and application paths/preferences. Determine which services can be initialized without the Avalonia desktop app.
+1. **Headless initialization:** Core is not a clean stateless library. `DocManager.Initialize` accepts a main thread and scheduler, then starts plugin discovery and real-time pitch services. `PathManager` derives root/data/cache paths from the process environment and preferences. The POC must verify whether a safe non-UI scheduler and isolated per-job paths are sufficient, or whether a small adapter/fork is needed.
 2. **Singer loading:** Confirm voicebank paths, archive extraction, encoding detection, character metadata, and oto.ini loading work in a server process.
 3. **Phonemizer discovery:** Determine whether the built-in plugin assembly can be loaded without desktop-only startup code, and register only the required Japanese phonemizers.
 4. **Worldline native library:** Confirm Linux x64 native library resolution and all required system libraries inside the Docker image.
@@ -70,7 +70,7 @@ The first POC should use synthetic fixtures or a freely redistributable test voi
 
 ## Proposed next implementation step
 
-Create an isolated `engine-dotnet/` proof-of-concept project and a dedicated Dockerfile. Pin OpenUtau to a specific upstream commit rather than tracking `master`. Start with a reference to the Core and Builtin projects and add only the minimal host/API code needed to test initialization, singer loading, phonemization, and a one-phrase render.
+An initial isolated `engine-dotnet/` smoke-test project and GitHub Actions workflow have been added. They pin OpenUtau to commit `08222cb7c48c4ab47faa34a6efc34e2c00898a1e`, reference the Builtin project (which references Core), and attempt to load and instantiate the Japanese VCV/CVVC phonemizer classes on Linux without launching Avalonia. This first check tests compilation and assembly loading only; it does not yet prove singer loading, headless initialization, or audio rendering. After it passes, add a dedicated Dockerfile and expand the POC in stages.
 
 Do not yet modify the existing Render Python service, public Pages entry point, or main branch. If a full Core reference cannot be initialized headlessly, reduce the POC to a smaller adapter/fork boundary and document the exact desktop-only dependencies before attempting broad refactoring.
 
