@@ -52,21 +52,28 @@ static PyObject *analyze_pcm(PyObject *self, PyObject *args) {
 
     const unsigned char *raw = (const unsigned char *)view.buf;
     double peak = 0.0, sum_sq = 0.0;
+    for (Py_ssize_t frame = 0; frame < frame_count; ++frame) {
+        double mixed = 0.0;
+        const unsigned char *base = raw + frame * frame_bytes;
+        for (int ch = 0; ch < channels; ++ch)
+            mixed += decode_sample(base + ch * width, width);
+        mixed /= channels;
+        double a = fabs(mixed);
+        if (a > peak) peak = a;
+        sum_sq += mixed * mixed;
+    }
+
     Py_ssize_t out = 0;
     for (Py_ssize_t frame = 0; frame < frame_count; frame += stride) {
         double mixed = 0.0;
         const unsigned char *base = raw + frame * frame_bytes;
         for (int ch = 0; ch < channels; ++ch)
             mixed += decode_sample(base + ch * width, width);
-        mixed /= channels;
-        samples[out++] = mixed;
-        double a = fabs(mixed);
-        if (a > peak) peak = a;
-        sum_sq += mixed * mixed;
+        samples[out++] = mixed / channels;
     }
     PyBuffer_Release(&view);
 
-    double rms = sqrt(sum_sq / (double)out);
+    double rms = sqrt(sum_sq / (double)frame_count);
     long crossings = 0;
     for (Py_ssize_t i = 1; i < out; ++i)
         if ((samples[i - 1] < 0.0 && samples[i] >= 0.0) ||
