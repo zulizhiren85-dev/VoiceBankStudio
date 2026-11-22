@@ -28,7 +28,7 @@ jobs:
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
           js = Path("voicebank.js").read_text(encoding="utf-8")
-          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js\""]
+          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=976023e\""]
           required_js = ["oto.ini", "preutterance", "overlap", "DecompressionStream", "webkitRelativePath"]
           missing = [item for item in required_html if item not in html] + [item for item in required_js if item not in js]
           if missing:
