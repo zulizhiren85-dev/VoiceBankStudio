@@ -208,11 +208,15 @@ function importAnalysisToSong(){
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
 $('voicePlay').addEventListener('click',async()=>{
- const api=window.VoiceBankStudioVoicebank;
- if(!api||!api.isReady()){ $('msg').textContent='先に⑤でUTAU音源のZIPまたはフォルダを読み込んでください。';return; }
- const btn=$('voicePlay');btn.disabled=true;$('msg').textContent='原音を準備して歌声を組み立てています…';
- try{const result=await api.playNotes(notes,{bpm:$('bpm').value,volume:$('volume').value});$('msg').textContent='UTAU原音の試験再生を開始しました（'+result.scheduled+'音）。';}
- catch(err){$('msg').textContent='歌声再生エラー：'+(err&&err.message?err.message:String(err));}
+ const btn=$('voicePlay'),api=window.VoiceBankStudioVoicebank;
+ btn.disabled=true;
+ if(!api){$('msg').textContent='再生エンジンを読み込めていません。ページを再読み込みしてください。';btn.disabled=false;return;}
+ if(!api.isReady()){$('msg').textContent='UTAU音源が読み込まれていません。⑤でZIPまたは音源フォルダを読み込んでください。';btn.disabled=false;return;}
+ $('msg').textContent='原音を準備しています…';
+ try{
+  const result=await api.playNotes(notes,{bpm:$('bpm').value,volume:$('volume').value});
+  $('msg').textContent=result.scheduled>0?'UTAU原音の試験再生を開始しました（'+result.scheduled+'音）。':'再生できる音符がありません。音程と歌詞を確認してください。';
+ }catch(err){$('msg').textContent='歌声再生エラー：'+(err&&err.message?err.message:String(err));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=dc48c97" defer></script></body></html>
+</script><script src="voicebank.js?v=vcb-20261122-02" defer></script></body></html>
