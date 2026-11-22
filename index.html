@@ -286,7 +286,7 @@ async function registerVoicebankArchive(archive,report){
   xhr.send(form);
  });
  registeredArchiveObject=archive;registeredArchiveId=result.archiveId;
- report('音源の初回登録が完了しました。次回からZIPの再送信は不要です（サーバー一時保存・最長30分）。');
+ report('音源の初回登録が完了しました。次回からZIPの再送信は不要です（サーバー一時保存・最長24時間。利用中は期限を延長）。');
  return registeredArchiveId;
 }
 function createRenderForm(archiveId,songNotes,bpm){
