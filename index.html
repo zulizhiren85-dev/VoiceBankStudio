@@ -17,9 +17,9 @@
 <label>拍子<select id="meter"><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option></select></label>
 <label>再生音量<input id="volume" type="number" min="0" max="100" value="35"></label>
 </div></section>
-<section class="panel"><h2>① メロディを作る</h2><p class="muted">音程・歌詞・長さを入力。最初からテスト用のメロディが入っています。</p>
+<section class="panel"><h2>① メロディを作る</h2><p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
-<div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ テスト再生</button><button id="voicePlay" class="primary" type="button">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">テスト曲に戻す</button></div><div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
+<div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ テスト再生</button><button id="voicePlay" class="primary" type="button">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div><div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符や重ねた音も作れます。</p></section>
 <section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAVなどの音声を端末内で簡易解析できます。端末内解析は通信なし。サーバー解析を使う場合のみ、確認後に音源を送信します（100MB以下・10分以内）。</p>
 <div class="toolbar"><label for="audioFile">音源ファイル（複数選択可）</label><input id="audioFile" type="file" multiple accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを複数選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">先頭の音源を読み込む</button><button id="analyze" disabled>端末内で簡易解析（通信なし）</button><button id="serverAnalyze" disabled>サーバー解析（通信あり）</button><button id="serverAnalyzeBatch" type="button" disabled>複数音源をまとめて解析</button></div>
@@ -43,7 +43,15 @@
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const seed=[['C4','あ',1,0],['D4','い',1,1],['E4','う',1,2],['G4','え',1,3],['E4','お',1,4],['D4','あ',1,5],['C4','い',2,6]];
+const twinkleLines=[
+ [['C4','き'],['C4','ら'],['G4','き'],['G4','ら'],['A4','ひ'],['A4','か'],['G4','る']],
+ [['F4','お'],['F4','そ'],['E4','ら'],['E4','の'],['D4','ほ'],['D4','し'],['C4','よ']],
+ [['G4','ま'],['G4','ば'],['F4','た'],['F4','き'],['E4','し'],['E4','て'],['D4','は']],
+ [['G4','み'],['G4','ん'],['F4','な'],['F4','を'],['E4','み'],['E4','て'],['D4','る']],
+ [['C4','き'],['C4','ら'],['G4','き'],['G4','ら'],['A4','ひ'],['A4','か'],['G4','る']],
+ [['F4','お'],['F4','そ'],['E4','ら'],['E4','の'],['D4','ほ'],['D4','し'],['C4','よ']]
+];
+const seed=twinkleLines.flatMap((line,lineIndex)=>line.map(([pitch,lyric],i)=>[pitch,lyric,(i===6?2:1),lineIndex*8+i]));
 let notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]})),nextId=8,ctx=null,active=[],decoded=null,objectURL=null,lastAnalysisFrames=[],lastAnalysisTempo=null;
 function render(){const root=$('notes');root.innerHTML='';notes.sort((a,b)=>a.start-b.start).forEach(n=>{const row=document.createElement('div');row.className='note';[['pitch',n.pitch,'text'],['lyric',n.lyric,'text'],['beats',n.beats,'number'],['start',n.start,'number']].forEach(([key,val,type])=>{const inp=document.createElement('input');inp.type=type;inp.value=val;inp.setAttribute('aria-label',key);if(key==='beats'){inp.min='.25';inp.max='8';inp.step='.25'}if(key==='start'){inp.min='0';inp.step='.25'}inp.addEventListener('change',()=>{n[key]=type==='number'?Number(inp.value):inp.value;if(key==='pitch')inp.value=n.pitch;});row.append(inp)});const del=document.createElement('button');del.textContent='×';del.title='この音符を削除';del.onclick=()=>{notes=notes.filter(x=>x.id!==n.id);render()};row.append(del);root.append(row)})}
 render();
