@@ -43,7 +43,7 @@
 <section class="panel"><h2>④ プロジェクト保存・読み込み</h2><div class="toolbar"><button class="primary" id="save">プロジェクトを保存</button><label class="filebtn">プロジェクトを読み込む<input id="load" type="file" accept=".json,application/json" class="hidden"></label></div><p class="small">音符・BPM・拍子をJSON形式で保存します。音声ファイル自体は含みません。</p><div id="msg" class="muted" aria-live="polite"></div></section>
 
 <section class="panel" id="voicebankBeta"><h2>⑤ UTAU音源ベータ 0.1</h2>
-<p class="muted">ZIPまたは音源フォルダを選択。oto.iniを解析し、エイリアス・原音設定を表示してWAVを個別試聴します。読み込み・個別試聴は端末内で行います。OpenUtau歌唱ボタンを押すと、ZIP音源と譜面を歌唱サーバーへ送信します。サーバー側では処理後に一時音源フォルダとレンダーキャッシュの削除を試みます。</p>
+<p class="muted">ZIPまたは音源フォルダを選択。oto.iniを解析し、エイリアス・原音設定を表示してWAVを個別試聴します。読み込み・個別試聴は端末内で行います。OpenUtau歌唱ボタンを押すと、800MB以下のZIP音源と譜面を歌唱サーバーへ送信します。サーバー側では処理後に一時音源フォルダとレンダーキャッシュの削除を試みます。</p>
 <div class="toolbar"><label class="filebtn">ZIP音源を読み込む<input id="vbZip" type="file" accept=".zip,application/zip" class="hidden"></label><label class="filebtn">音源フォルダを読み込む<input id="vbFolder" type="file" webkitdirectory directory multiple class="hidden"></label><button id="vbClear" type="button">読み込み解除</button></div>
 <div id="vbSummary" class="muted" style="margin-top:10px">音源はまだ読み込まれていません。</div><div id="vbStatus" class="status" style="margin-top:8px">ZIPまたはフォルダを選択してください。</div><audio id="vbAudio" controls class="hidden" style="width:100%;margin-top:8px"></audio><div id="vbRows" class="vb-list"></div>
 <p class="small">歌唱エンジンはOpenUtau Coreの日本語VCV/CV/CVVC phonemizerとWorldline-Rを使用します。oto.ini・prefix.map・多音階サブバンクはOpenUtau側で読み込みます。現在は単旋律ベータ版で、重ねた音符、ピッチベンド、ビブラート、特殊なresampler設定は未対応です。OpenUtau歌唱にはZIP読み込みが必要です。フォルダ読み込みは端末内の原音試聴用です。</p></section>
@@ -271,6 +271,7 @@ $('voicePlay').addEventListener('click',async()=>{
   if(!api.isReady())throw Error('UTAU音源が未読込です。⑤で音源を読み込んでください。');
   const archive=api.getArchiveFile();
   if(!archive)throw Error('OpenUtauエンジンで歌わせるには、⑤から音源ZIPを読み込んでください。フォルダ読み込みはローカル試聴用です。');
+  if(archive.size>800*1024*1024)throw Error('音源ZIPは800MB以下にしてください。');
   if(inspectedArchive!==archive)await inspectLoadedVoicebank();
   const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120));
   const octave=Number($('octave').value)||0;
@@ -306,4 +307,4 @@ $('voicePlay').addEventListener('click',async()=>{
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=20261122-autodetect2" defer></script></body></html>
+</script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>
