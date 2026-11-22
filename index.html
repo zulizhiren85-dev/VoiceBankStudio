@@ -20,7 +20,7 @@
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
 <div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button><button id="play">▶ 再生</button><button id="stop">■ 停止</button><button id="reset">テスト曲に戻す</button></div>
 <p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符や重ねた音も作れます。</p></section>
-<section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAV・MP3・FLAC・M4A・AAC・AIFF・OGG・OPUS・WMAに対応。選択後に確認してからサーバーへ送信し、解析用WAVに変換します（25MB以下・3分以内）。元音源と変換ファイルは解析後に削除します。</p>
+<section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAV・MP3・FLAC・M4A・AAC・AIFF・OGG・OPUS・WMAに対応。選択後に確認してからサーバーへ送信し、解析用WAVに変換します（100MB以下・3分以内）。元音源と変換ファイルは解析後に削除します。</p>
 <div class="toolbar"><label for="audioFile">音源ファイル</label><input id="audioFile" type="file" accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">選択した音源を読み込む</button><button id="analyze" disabled>簡易解析する</button><button id="serverAnalyze" disabled>サーバーへ送って解析</button></div>
 <div id="fileInfo" class="muted" style="margin-top:8px">まだ音源は選択されていません。</div><canvas id="wave" width="900" height="84"></canvas><audio id="audio" controls class="hidden"></audio>
 <div id="analysis" class="status" style="margin-top:10px">解析結果はここに表示されます。まずは音源を読み込んでください。</div></section>
@@ -59,7 +59,7 @@ let uploadInProgress=false;
 async function uploadAudioFile(f,ask=true){
   if(!f){$('analysis').textContent='ファイルが選択されていません。';return}
   if(!/\.(wav|wave|mp3|flac|m4a|aac|aiff|aif|ogg|opus|wma)$/i.test(f.name)){$('analysis').textContent='対応形式は WAV / MP3 / FLAC / M4A / AAC / AIFF / OGG / OPUS / WMA です。';return}
-  if(f.size>25*1024*1024){$('analysis').textContent='サーバーへ送れる音源は25MB以下です。';return}
+  if(f.size>100*1024*1024){$('analysis').textContent='サーバーへ送れる音源は100MB以下です。';return}
   if(f.size===0){$('analysis').textContent='ファイルサイズが0バイトです。別のファイルを選んでください。';return}
   if(uploadInProgress)return;
   if(ask&&!window.confirm('選択した音源を解析サーバーへ送信します。通信量が発生します。音源は解析後にサーバーの一時ファイルから削除されます。送信しますか？'))return;
@@ -85,7 +85,7 @@ async function uploadAudioFile(f,ask=true){
     uploadInProgress=false;btn.disabled=false;
   };
   xhr.onerror=()=>{$('analysis').textContent='サーバーに接続できませんでした。通信環境またはサーバーの状態を確認してください。';uploadInProgress=false;btn.disabled=false};
-  xhr.ontimeout=()=>{$('analysis').textContent='送信がタイムアウトしました。25MB以下・3分以内の対応音源で再度お試しください。';uploadInProgress=false;btn.disabled=false};
+  xhr.ontimeout=()=>{$('analysis').textContent='送信がタイムアウトしました。100MB以下・3分以内の対応音源で再度お試しください。';uploadInProgress=false;btn.disabled=false};
   xhr.send(data);
 }
 $('serverAnalyze').addEventListener('click',()=>{const f=audioPicker.files&&audioPicker.files[0];uploadAudioFile(f,true)});
