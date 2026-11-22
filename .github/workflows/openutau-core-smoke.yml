@@ -68,7 +68,7 @@ jobs:
           with open(os.path.join(root, "character.txt"), "w", encoding="ascii") as f:
               f.write("name=VoiceBankStudio CI Fixture\n")
           with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
-              f.write("a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\na.wav=a k,0,100,0,0,0\n")
+              f.write("a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\na.wav=a k,0,100,0,0,0\na.wav=か,0,100,0,0,0\na.wav=- か,0,100,0,0,0\n")
           with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
               wav.setnchannels(1)
               wav.setsampwidth(2)
@@ -90,7 +90,7 @@ jobs:
           with open("/tmp/vbs-voicebank-result.json", encoding="utf-8") as f:
               result = json.load(f)
           assert result["loaded"] is True, result
-          assert result["otoCount"] == 3, result
+          assert result["otoCount"] == 5, result
           assert result["phonemizerTests"]["vcv"] == ["a か"], result
           assert result["phonemizerTests"]["cvvc"] == ["あ", "a k"], result
           print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
@@ -137,6 +137,55 @@ jobs:
           samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
           assert any(sample != 0 for sample in samples), "rendered WAV is silent"
           print(f"OpenUtau Worldline-R rendered {len(samples)} non-empty PCM16 samples")
+          PY
+
+
+      - name: Verify two-note VCV rendering across a rest
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-rest-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-rest-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-rest-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          pcm = data[44:]
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert len(samples) > 100000, f"rest was not preserved: {len(samples)} samples"
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"Multi-phrase VCV render preserved song timeline: {len(samples)} samples")
+          PY
+
+      - name: Verify two-note CVVC rendering
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":480,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-cvvc" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-cvvc-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-cvvc-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-cvvc-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          pcm = data[44:]
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert len(samples) > 40000, f"unexpected CVVC render length: {len(samples)}"
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"Two-note CVVC render succeeded: {len(samples)} samples")
           PY
 
       - name: Build and run Core/Builtin smoke test
