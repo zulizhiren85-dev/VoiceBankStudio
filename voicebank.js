@@ -92,7 +92,25 @@ $("vbClear").addEventListener("click",()=>{stopSinging();decodedCache.clear();st
 
 const decodedCache=new Map();let synthContext=null,synthSources=[];
 function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
-function vowelOf(s){const t=String(s||"").trim().slice(-1);const groups={a:"あかがさざただなはばぱまやらわぁゃ",i:"いきぎしじちぢにひびぴみりゐぃ",u:"うくぐすずつづぬふぶぷむゆるぅゅ",e:"えけげせぜてでねへべぺめれゑぇ",o:"おこごそぞとどのほぼぽもよろをぉょ"};for(const [v,chars] of Object.entries(groups))if(chars.includes(t))return v;return "";}
+function vowelOf(s){
+ const t=String(s||"").trim().normalize("NFC").toLowerCase();
+ if(!t)return "";
+ const last=t.slice(-1);
+ const kana={a:"あかがさざただなはばぱまやらわぁゃゎ",i:"いきぎしじちぢにひびぴみりゐぃ",u:"うくぐすずつづぬふぶぷむゆるぅゅ",e:"えけげせぜてでねへべぺめれゑぇ",o:"おこごそぞとどのほぼぽもよろをぉょ"};
+ for(const [v,chars] of Object.entries(kana))if(chars.includes(last))return v;
+ const roman=t.match(/[aiueo]$/);return roman?roman[0]:"";
+}
+function aliasKey(s){return String(s||"").normalize("NFC").trim().replace(/\\s+/g," ").toLowerCase();}
+function chooseRow(lyric,previous,first=false){
+ const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous),candidates=[];
+ if(prev)candidates.push(prev+" "+target,prev+target,prev+"-"+target,prev+"_"+target);
+ if(first||!prev)candidates.push("- "+target,"-"+target,"_ "+target,"_"+target);
+ candidates.push(target);
+ const lookup=new Map();
+ for(const row of state.rows){const key=aliasKey(row.alias);if(!lookup.has(key))lookup.set(key,row);}
+ for(const candidate of candidates){const row=lookup.get(aliasKey(candidate));if(row)return row;}
+ return null;
+}
 async function sampleBuffer(path){
  if(decodedCache.has(path))return decodedCache.get(path);
  let blob=state.files.get(path);if(!blob){const entry=state.entries.get(path);if(!entry)throw Error("原音WAVが見つかりません: "+path);blob=await zipFile(entry);}
@@ -115,25 +133,31 @@ async function playNotes(notes,options={}){
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error("音声再生に対応していません。");
  synthContext=synthContext||new AC();await synthContext.resume();
  synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];
- const ordered=notes.slice().sort((a,b)=>Number(a.start)-Number(b.start)),plans=[],missing=[];let previous="";
+ const ordered=notes.slice().sort((a,b)=>Number(a.start)-Number(b.start)),plans=[],missing=[];let previous="",previousEnd=-Infinity;
  for(const n of ordered){
-  const row=chooseRow(n.lyric,previous);previous=n.lyric;
+  const start=Math.max(0,Number(n.start)||0),beats=Math.max(.05,Number(n.beats)||1);
+  const first=start-previousEnd>.05,row=chooseRow(n.lyric,first?"":previous,first);
+  previous=n.lyric;previousEnd=start+beats;
   if(!row||!row.valid){missing.push(String(n.lyric||"（空欄）"));continue;}
-  try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
+  try{const buffer=await sampleBuffer(row.file);plans.push({n,row,buffer,start,beats});}catch(e){missing.push(String(n.lyric||"（WAV読込失敗）"));}
  }
  if(missing.length)throw Error("対応する原音が見つからない音符があります: "+[...new Set(missing)].slice(0,8).join("、"));
  if(!plans.length)throw Error("再生できる原音がありません。");
  const bpm=Math.max(40,Math.min(240,Number(options.bpm)||120)),unit=60/bpm,volume=Math.max(0,Math.min(100,Number(options.volume??35)))/100*.65,now=synthContext.currentTime+.08;
- for(const {n,row,buffer} of plans){
-  const hz=noteHz(n.pitch);if(!hz)continue;
-  const folderPitch=row.file.match(/(?:^|\/)([A-G](?:#|b)?-?\d)(?:\/|$)/i);
+ for(let i=0;i<plans.length;i++){
+  const {n,row,buffer,start,beats}=plans[i],next=plans[i+1],hz=noteHz(n.pitch);if(!hz)continue;
+  const folderPitch=row.file.match(/(?:^|\\/)([A-G](?:#|b)?-?\\d)(?:\\/|$)/i);
   const root=folderPitch?noteHz(folderPitch[1]):noteHz("C4"),rate=Math.max(.5,Math.min(2.0,hz/(root||noteHz("C4"))));
   const offset=Math.min(Math.max(0,row.offset/1000),Math.max(0,buffer.duration-.02)),tail=Math.max(0,Math.abs(row.cutoff)/1000),available=Math.max(.02,buffer.duration-offset-tail);
-  const noteStart=now+Math.max(0,Number(n.start)||0)*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
-  const targetDuration=Math.max(.08,(Number(n.beats)||1)*unit+pre),sourceDuration=Math.min(available,targetDuration*rate);
+  const noteStart=now+start*unit,pre=Math.max(0,row.preutterance/1000),startAt=Math.max(now,noteStart-pre);
+  const nominalEnd=noteStart+beats*unit,nextStart=next?now+next.start*unit:nominalEnd;
+  const connected=!!next&&next.start<=start+beats+.02,overlap=connected?Math.max(0,next.row.overlap/1000):0;
+  const endAt=connected?Math.min(nominalEnd+overlap,nextStart+overlap):nominalEnd;
+  const targetDuration=Math.max(.08,endAt-startAt),sourceDuration=Math.min(available,targetDuration*rate);
+  const actualEnd=startAt+sourceDuration/rate,fadeIn=Math.min(.025,targetDuration*.12),fadeOut=Math.min(.045,targetDuration*.2);
   const source=synthContext.createBufferSource(),gain=synthContext.createGain();source.buffer=buffer;source.playbackRate.setValueAtTime(rate,startAt);
-  gain.gain.setValueAtTime(0,startAt);gain.gain.linearRampToValueAtTime(volume,Math.min(startAt+.025,startAt+targetDuration*.15));
-  gain.gain.setValueAtTime(volume,Math.max(startAt+.03,startAt+targetDuration*.72));gain.gain.linearRampToValueAtTime(0,startAt+Math.max(.04,sourceDuration/rate));
+  gain.gain.setValueAtTime(0,startAt);gain.gain.linearRampToValueAtTime(volume,startAt+fadeIn);
+  gain.gain.setValueAtTime(volume,Math.max(startAt+fadeIn,actualEnd-fadeOut));gain.gain.linearRampToValueAtTime(0,actualEnd);
   source.connect(gain).connect(synthContext.destination);source.start(startAt,offset,sourceDuration);synthSources.push(source);
  }
  return {scheduled:plans.length};
