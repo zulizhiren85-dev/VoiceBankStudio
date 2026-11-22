@@ -110,6 +110,30 @@ jobs:
           test "$status" = "400"
           test ! -e /tmp/outside.txt
 
+
+      - name: Render a real WAV through OpenUtau Worldline-R
+        run: |
+          curl --fail --silent --show-error \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-render.wav
+          python3 - <<'PY'
+          import os, struct
+          path = "/tmp/vbs-render.wav"
+          data = open(path, "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV file"
+          assert data[12:16] == b"fmt " and data[36:40] == b"data", "invalid WAV chunks"
+          assert len(data) > 44, "empty WAV"
+          pcm = data[44:]
+          assert len(pcm) % 2 == 0, "invalid PCM16 length"
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"OpenUtau Worldline-R rendered {len(samples)} non-empty PCM16 samples")
+          PY
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
