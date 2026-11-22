@@ -85,6 +85,9 @@ app.MapGet("/", () => Results.Ok(new
     engineStatus = "/api/v1/engine/status",
 }));
 
+app.MapPost("/api/v1/voicebanks/register", VoicebankArchiveCache.RegisterAsync)
+    .DisableAntiforgery()
+    .RequireRateLimiting("voicebank-uploads");
 app.MapPost("/api/v1/voicebanks/inspect", VoicebankArchiveInspector.InspectAsync)
     .DisableAntiforgery()
     .RequireRateLimiting("voicebank-uploads");
