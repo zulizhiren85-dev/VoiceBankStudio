@@ -24,7 +24,7 @@ ALLOWED_ORIGINS = ["https://zulizhiren85-dev.github.io"]
 
 app = FastAPI(
     title="VoiceBankStudio Analysis API",
-    version="0.2.0",
+    version="0.3.0",
     description="Temporary multi-format audio upload, conversion to PCM WAV, and analysis.",
 )
 app.add_middleware(
@@ -42,7 +42,12 @@ def root() -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "api_version": "0.3.0",
+        "max_duration_seconds": MAX_DURATION_SECONDS,
+        "max_upload_bytes": MAX_UPLOAD_BYTES,
+    }
 
 
 def convert_to_analysis_wav(source_path: str, output_path: str) -> float:
