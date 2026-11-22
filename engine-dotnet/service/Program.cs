@@ -1,6 +1,7 @@
 using System.Reflection;
 using OpenUtau.Api;
 using VoiceBankStudio.Engine;
+using Microsoft.AspNetCore.Http.Features;
 
 const string serviceName = "VoiceBankStudio.Engine";
 const string openUtauRevision = "08222cb7c48c4ab47faa34a6efc34e2c00898a1e";
@@ -14,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
+});
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 270L * 1024 * 1024;
 });
 var app = builder.Build();
 
