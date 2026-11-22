@@ -94,6 +94,7 @@ jobs:
           assert result["loaded"] is True, result
           assert result["otoCount"] == 7, result
           assert result["phonemizerTests"]["vcv"] == ["a か"], result
+          assert result["phonemizerTests"]["cv"] == ["- か"], result
           assert result["phonemizerTests"]["cvvc"] == ["あ", "a k"], result\n          assert result["prefixMapTests"] == {"c4": "low_あ", "c5": "high_あ"}, result
           print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
           PY
