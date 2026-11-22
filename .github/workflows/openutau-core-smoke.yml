@@ -31,6 +31,7 @@ jobs:
           git clone https://github.com/openutau/OpenUtau.git "$RUNNER_TEMP/OpenUtau"
           git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
           test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+          cp engine-dotnet/OpenUtau.Directory.Build.targets "$RUNNER_TEMP/OpenUtau/Directory.Build.targets"
 
 
       - name: Build HTTP engine service
