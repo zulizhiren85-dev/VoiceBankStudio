@@ -20,7 +20,7 @@
 <label>オクターブ<select id="octave"><option value="-2">−2（2オクターブ下）</option><option value="-1">−1（1オクターブ下）</option><option value="0" selected>±0（標準）</option><option value="1">＋1（1オクターブ上）</option><option value="2">＋2（2オクターブ上）</option></select></label>
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">日本語 VCV / CV</option><option value="ja-cvvc">日本語 CVVC</option></select></label><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
@@ -66,7 +66,7 @@ $('add').onclick=()=>{notes.push({id:nextId++,pitch:'C4',lyric:'あ',beats:1,sta
 function freq(p){const m=p.trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return null;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='B'?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12)}
 function octaveRatio(){return Math.pow(2,Math.max(-2,Math.min(2,Number($('octave')?.value)||0)))}
 function stop(){active.forEach(o=>{try{o.stop()}catch(e){}});active=[]}
-$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();};
+$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();if(renderedAudio){renderedAudio.pause();renderedAudio.currentTime=0;} };
 $('play').onclick=async()=>{stop();const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext){$('msg').textContent='このブラウザは音声再生に対応していません。';return}ctx=ctx||new AudioContext();await ctx.resume();const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120)),unit=60/bpm,vol=Math.max(0,Math.min(100,Number($('volume').value)||35))/100*.18,now=ctx.currentTime+.08;notes.forEach(n=>{const f=freq(n.pitch);if(!f)return;const osc=ctx.createOscillator(),gain=ctx.createGain(),start=now+Math.max(0,n.start)*unit,dur=Math.max(.08,n.beats*unit);osc.type='triangle';osc.frequency.value=f*octaveRatio();gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(vol,start+.015);gain.gain.setValueAtTime(vol,start+dur*.82);gain.gain.linearRampToValueAtTime(0,start+dur);osc.connect(gain).connect(ctx.destination);osc.start(start);osc.stop(start+dur+.02);active.push(osc)});$('msg').textContent='テスト再生中です。'};
 $('reset').onclick=()=>{notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]}));nextId=43;$('bpm').value=110;$('meter').value='4/4';render();$('msg').textContent='テスト曲に戻しました。'};
 $('sourceService').value='youtube';
@@ -223,18 +223,46 @@ function importAnalysisToSong(){
  render();$('msg').textContent='解析結果から '+notes.length+' 音の仮メロディを作りました。音程・歌詞・長さを確認して調整してください。';
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
+const OPENUTAU_ENGINE_API='https://voicebankstudio-openutau-engine.onrender.com';
+let renderedAudio=null,renderedAudioUrl=null;
 $('voicePlay').addEventListener('click',async()=>{
  const btn=$('voicePlay'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
  btn.disabled=true;
  const report=message=>{status.textContent=message;$('msg').textContent=message;};
  try{
-  report('歌唱ボタンを受け取りました。再生エンジンを確認中…');
-  if(!api)throw Error('再生エンジンが未読込です。ページを再読み込みしてください。');
-  if(!api.isReady())throw Error('UTAU音源が未読込です。⑤でZIPまたは音源フォルダを読み込んでください。');
-  report('原音WAVを準備しています…');
-  const result=await api.playNotes(notes,{bpm:$('bpm').value,volume:$('volume').value,octave:$('octave').value});
-  report('再生開始：'+result.scheduled+'音 / エイリアス：'+(result.aliases||[]).join('、'));
- }catch(err){report('歌声再生エラー：'+(err&&err.message?err.message:String(err)));}
+  report('OpenUtauエンジンを起動しています…');
+  if(!api)throw Error('UTAU音源モジュールが未読込です。ページを再読み込みしてください。');
+  if(!api.isReady())throw Error('UTAU音源が未読込です。⑤で音源を読み込んでください。');
+  const archive=api.getArchiveFile();
+  if(!archive)throw Error('OpenUtauエンジンで歌わせるには、⑤から音源ZIPを読み込んでください。フォルダ読み込みはローカル試聴用です。');
+  const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120));
+  const octave=Number($('octave').value)||0;
+  const midiFromPitch=p=>{const hz=freq(p);return hz>0?Math.round(69+12*Math.log2(hz/440))+octave*12:null;};
+  const songNotes=notes.map(n=>({lyric:String(n.lyric||'').trim(),tone:midiFromPitch(n.pitch),position:Math.round(Math.max(0,Number(n.start)||0)*480),duration:Math.round(Math.max(.05,Number(n.beats)||1)*480)}));
+  if(songNotes.some(n=>!n.lyric||n.tone===null))throw Error('歌詞または音程を確認してください。');
+  const form=new FormData();
+  form.append('archive',archive,archive.name||'voicebank.zip');
+  form.append('notesJson',JSON.stringify(songNotes));
+  form.append('bpm',String(bpm));
+  form.append('phonemizer',$('phonemizer').value);
+  report('UTAU音源と '+songNotes.length+' 音の譜面をOpenUtauへ送信しています…');
+  const response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/render',{method:'POST',body:form});
+  if(!response.ok){
+   let detail='HTTP '+response.status;
+   try{const body=await response.json();detail=body.detail||body.error||detail;}catch(_){}
+   throw Error(detail);
+  }
+  const blob=await response.blob();
+  if(blob.size<44)throw Error('サーバーから有効なWAVが返りませんでした。');
+  if(renderedAudio){renderedAudio.pause();renderedAudio.src='';renderedAudio=null;}
+  if(renderedAudioUrl)URL.revokeObjectURL(renderedAudioUrl);
+  renderedAudioUrl=URL.createObjectURL(blob);
+  renderedAudio=new Audio(renderedAudioUrl);
+  renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
+  report('OpenUtauで歌声を生成しました。再生しています…');
+  await renderedAudio.play();
+  renderedAudio.onended=()=>report('歌唱が完了しました。WAV生成済みです。');
+ }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
 </script><script src="voicebank.js?v=vcb-20261122-05" defer></script></body></html>
