@@ -38,7 +38,7 @@ async function readZip(blob){
    if(name.split("/").some(x=>x===".."||x==="."))throw Error("不正なファイルパスを含むZIPです。");
    if(flags&1)throw Error("暗号化ZIPには対応していません。");
    if(method!==0&&method!==8)throw Error("未対応の圧縮方式を含んでいます。");
-   total+=usize;if(total>2*1024*1024*1024)throw Error("展開後の合計サイズが2GBを超えます。");
+   total+=usize;if(total>1024*1024*1024)throw Error("展開後の合計サイズが1GBを超えます。");
    entries.set(name,{name,method,csize,usize,local});
   }
   p+=46+nl+el+cl;
