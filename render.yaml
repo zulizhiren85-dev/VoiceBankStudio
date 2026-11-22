@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: voicebankstudio-analysis
+    name: voicebankstudio-analysis-zulizhiren85
     runtime: python
     plan: free
     buildCommand: pip install -r server/requirements.txt && pip install ./engine
