@@ -12,7 +12,6 @@ public static class VoicebankArchiveInspector
     private const long MaxArchiveBytes = 256L * 1024 * 1024;
     private const long MaxExpandedBytes = 1024L * 1024 * 1024;
     private const int MaxEntries = 50000;
-    private static readonly SemaphoreSlim InspectionGate = new(1, 1);
 
     public static async Task<IResult> InspectAsync(IFormFile archive, CancellationToken cancellationToken)
     {
@@ -21,7 +20,7 @@ public static class VoicebankArchiveInspector
         if (archive.Length > MaxArchiveBytes)
             return Results.BadRequest(new { error = "ZIPファイルは256MB以下にしてください。" });
 
-        if (!await InspectionGate.WaitAsync(0))
+        if (!await EngineWorkGate.Gate.WaitAsync(0))
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
 
         var jobRoot = Path.Combine(Path.GetTempPath(), "voicebankstudio", Guid.NewGuid().ToString("N"));
@@ -179,7 +178,7 @@ public static class VoicebankArchiveInspector
             {
                 // Temporary cleanup is best-effort; a later janitor will remove stale job folders.
             }
-            InspectionGate.Release();
+            EngineWorkGate.Gate.Release();
         }
     }
 }
