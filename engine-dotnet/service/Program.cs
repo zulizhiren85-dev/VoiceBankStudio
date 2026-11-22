@@ -118,11 +118,14 @@ app.MapGet("/api/v1/engine/status", () =>
         singleNoteRenderVerified = true,
         multiPhraseVcvRenderVerified = true,
         cvvcRenderVerified = true,
+        cvFallbackVerified = true,
+        prefixMapMultiPitchVerified = true,
+        docker512MiBRenderVerified = true,
         realVoicebankVerified = false,
         renderingReady = true,
         outputFormat = "WAV PCM16 mono 44100 Hz",
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
-        note = "The Linux CI pipeline has rendered non-silent single-note, multi-phrase VCV, and two-note CVVC WAV files from a synthetic voicebank. Real-world voicebank quality and iPad playback still need user-bank validation.",
+        note = "Linux CI has rendered non-silent single-note, multi-phrase VCV, and two-note CVVC WAV files from a synthetic voicebank; it also verified CV fallback, C4/C5 prefix.map mapping, and a Docker render under a 512 MiB memory limit. Real-world voicebank quality and iPad playback still need user-bank validation.",
         error = inspection.Error,
     });
 });
