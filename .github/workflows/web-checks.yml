@@ -43,5 +43,5 @@ jobs:
           missing = [item for item in required_html if item not in html] + [item for item in required_js if item not in js]
           if missing:
               raise SystemExit("Missing beta integration items: " + ", ".join(missing))
-          print("VCV playback syntax and integration checks passed.")
+          print("VCV alias, pitch, syntax, and integration checks passed.")
           PY
