@@ -9,7 +9,7 @@ namespace VoiceBankStudio.Engine;
 
 public static class VoicebankArchiveInspector
 {
-    private const long MaxArchiveBytes = 256L * 1024 * 1024;
+    private const long MaxArchiveBytes = 800L * 1024 * 1024;
     private const long MaxExpandedBytes = 1024L * 1024 * 1024;
     private const int MaxEntries = 50000;
 
@@ -18,7 +18,7 @@ public static class VoicebankArchiveInspector
         if (archive is null || archive.Length == 0)
             return Results.BadRequest(new { error = "ZIPファイルが選択されていません。" });
         if (archive.Length > MaxArchiveBytes)
-            return Results.BadRequest(new { error = "ZIPファイルは256MB以下にしてください。" });
+            return Results.BadRequest(new { error = "ZIPファイルは800MB以下にしてください。" });
 
         if (!await EngineWorkGate.Gate.WaitAsync(0))
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
