@@ -4,6 +4,7 @@ import unittest
 import wave
 from pathlib import Path
 from voicebankstudio_audio import analyze_wav
+from voicebankstudio_audio import dsp
 
 
 class AudioAnalysisTests(unittest.TestCase):
@@ -95,6 +96,35 @@ class AudioAnalysisTests(unittest.TestCase):
             result = analyze_wav(path)
             self.assertAlmostEqual(result["analyzed_seconds"], 0.53, delta=0.002)
             self.assertAlmostEqual(result["duration_seconds"], 0.53, delta=0.002)
+
+    def test_python_fallback_matches_basic_tone_analysis(self):
+        rate = 16000
+        pcm = bytearray()
+        for index in range(rate // 2):
+            sample = int(0.5 * 32767 * math.sin(2 * math.pi * 220 * index / rate))
+            pcm.extend(sample.to_bytes(2, "little", signed=True))
+
+        native = dsp._native_analyze
+        try:
+            dsp._native_analyze = None
+            result = dsp.analyze_pcm(bytes(pcm), rate, 1, 2)
+        finally:
+            dsp._native_analyze = native
+
+        self.assertGreater(result["peak"], 0.49)
+        self.assertAlmostEqual(result["pitch_hz"], 220.0, delta=8.0)
+
+    def test_silence_does_not_produce_a_pitch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "silence.wav"
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(1)
+                wav.setsampwidth(2)
+                wav.setframerate(16000)
+                wav.writeframes(bytes(16000 * 2 // 2))
+            result = analyze_wav(path)
+            self.assertEqual(result["pitch_detected_frame_count"], 0)
+            self.assertEqual(result["pitch_hz"], 0.0)
 
     def test_source_file_is_not_modified(self):
         with tempfile.TemporaryDirectory() as folder:
