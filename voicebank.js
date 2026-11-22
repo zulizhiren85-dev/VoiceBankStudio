@@ -121,16 +121,16 @@ function aliasKey(s){
   .split(" ").filter(Boolean).join(" ");
 }
 function pitchNumber(p){
- const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\\d)$/);if(!m)return null;
+ const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return null;
  const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);
  return (Number(m[3])+1)*12+sem;
 }
 function parsePrefixMap(text){
  state.prefixMap.clear();
- for(const line of String(text||"").replace(/^\\uFEFF/,"").split(/\\r?\\n/)){
+ for(const line of String(text||"").replace(/^\uFEFF/,"").split(/\r?\n/)){
   if(!line.trim()||line.trim().startsWith(";"))continue;
-  const fields=line.split("\\t");
-  const note=(fields[0]||"").trim(),m=note.match(/^([A-G])([#B]?)(-?\\d)$/i);
+  const fields=line.split("\t");
+  const note=(fields[0]||"").trim(),m=note.match(/^([A-G])([#B]?)(-?\d)$/i);
   if(!m)continue;
   const prefix=String(fields[1]||"").trim(),suffix=String(fields[2]||"").trim();
   state.prefixMap.set(pitchNumber(note),{prefix,suffix,note});
@@ -153,7 +153,7 @@ function chooseRow(lyric,previous,first,pitch){
   if(rows.length===1)return rows[0];
   if(midi!==null){
    const ranked=rows.map(row=>{
-    const match=row.file.match(/(?:^|\\/)([A-G])([#B]?)(-?\\d)(?:\\/|$)/i);
+    const match=row.file.match(/(?:^|\/)([A-G])([#B]?)(-?\d)(?:\/|$)/i);
     const root=match?pitchNumber(match[1]+match[2]+match[3]):null;
     return {row,distance:root===null?Infinity:Math.abs(root-midi)};
    }).sort((a,b)=>a.distance-b.distance);
