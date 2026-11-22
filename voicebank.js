@@ -95,17 +95,31 @@ function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#
 function vowelOf(s){
  const t=String(s||"").trim().normalize("NFC").toLowerCase();
  if(!t)return "";
+ if(t==="ng")return "N";
  const last=t.slice(-1);
- const kana={a:"あかがさざただなはばぱまやらわぁゃゎ",i:"いきぎしじちぢにひびぴみりゐぃ",u:"うくぐすずつづぬふぶぷむゆるぅゅ",e:"えけげせぜてでねへべぺめれゑぇ",o:"おこごそぞとどのほぼぽもよろをぉょ"};
+ const kana={
+  a:"ぁあかがさざただなはばぱまゃやらわァアカガサザタダナハバパマャヤラワ",
+  e:"ぇえけげせぜてでねへべぺめれゑェエケゲセゼテデネヘベペメレヱ",
+  i:"ぃいきぎしじちぢにひびぴみりゐィイキギシジチヂニヒビピミリヰ",
+  o:"ぉおこごそぞとどのほぼぽもょよろをォオコゴソゾトドノホボポモョヨロヲ",
+  u:"ぅうくぐすずつづぬふぶぷむゅゆるゔゥウクグスズツヅヌフブプムュユルヴ"
+ };
  for(const [v,chars] of Object.entries(kana))if(chars.includes(last))return v;
+ if(last==="ん")return "n";
+ if(last==="ン")return "N";
  const roman=t.match(/[aiueo]$/);return roman?roman[0]:"";
 }
-function aliasKey(s){return String(s||"").normalize("NFC").trim().toLowerCase().split(" ").filter(Boolean).join(" ");}
+function aliasKey(s){
+ return String(s||"").normalize("NFC").trim().toLowerCase()
+  .replaceAll("\\t"," ").replaceAll("\\r"," ").replaceAll("\\n"," ")
+  .split(" ").filter(Boolean).join(" ");
+}
 function chooseRow(lyric,previous,first=false){
- const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous),candidates=[];
- if(prev)candidates.push(prev+" "+target,prev+target,prev+"-"+target,prev+"_"+target);
- if(first||!prev)candidates.push("- "+target,"-"+target,"_ "+target,"_"+target);
- candidates.push(target);
+ const target=String(lyric||"").trim().normalize("NFC"),prev=vowelOf(previous);
+ if(!target)return null;
+ const candidates=prev
+  ?[prev+" "+target,"* "+target,target,"- "+target,prev+target,prev+"-"+target,prev+"_"+target]
+  :["- "+target,target,"-"+target,"_ "+target,"_"+target];
  const lookup=new Map();
  for(const row of state.rows){const key=aliasKey(row.alias);if(!lookup.has(key))lookup.set(key,row);}
  for(const candidate of candidates){const row=lookup.get(aliasKey(candidate));if(row)return row;}
