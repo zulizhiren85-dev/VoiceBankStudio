@@ -114,8 +114,8 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             {
                 if (string.IsNullOrWhiteSpace(item.lyric) || item.lyric.Length > 64)
                     throw new ArgumentException("歌詞は1〜64文字にしてください。");
-                if (item.tone is < 24 or > 108 || item.position < 0 ||
-                    item.duration is < 30 or > 7680)
+                if (item.tone is < 24 or > 108 || item.position is < 0 or > 200000 ||
+                    item.duration is < 30 or > 7680 || item.position + item.duration > 200000)
                     throw new ArgumentException("音程または音符の長さ・位置が範囲外です。");
                 if (item.position < end)
                     throw new ArgumentException("音符が重なっています。最初の歌唱版では単旋律のみ対応します。");
