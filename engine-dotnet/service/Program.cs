@@ -17,6 +17,7 @@ var allowedOrigins = (Environment.GetEnvironmentVariable("VOICEBANKSTUDIO_ALLOWE
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options => options.AddPolicy("voicebankstudio", policy =>
     policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddSingleton<HeadlessOpenUtauHost>();
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
@@ -71,6 +72,8 @@ app.MapGet("/", () => Results.Ok(new
 
 app.MapPost("/api/v1/voicebanks/inspect", VoicebankArchiveInspector.InspectAsync)
     .DisableAntiforgery();
+app.MapPost("/api/v1/render", VoicebankRenderEndpoint.RenderAsync)
+    .DisableAntiforgery();
 
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -94,6 +97,7 @@ app.MapGet("/api/v1/engine/status", () =>
             missing = inspection.Missing,
         },
         voicebankInspectionAvailable = true,
+        renderingApiAvailable = true,
         renderingReady = false,
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
         note = "This endpoint verifies Core/Builtin assembly loading only. It does not load a voicebank or render audio.",
