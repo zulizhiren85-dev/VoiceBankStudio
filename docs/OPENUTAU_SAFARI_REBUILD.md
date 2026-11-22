@@ -2,91 +2,153 @@
 
 ## Goal
 
-Rebuild the editing and singing workflow around OpenUtau's proven project, phonemizer, voicebank, resampler, wavtool, and rendering concepts. The primary client remains Safari on iPad. Keep the current main branch intact while the replacement is developed on a separate branch.
+Build an iPad Safari singing editor that reuses OpenUtau's proven data model, voicebank handling, phonemizers, and rendering pipeline where technically and legally practical. This is not an attempt to run the OpenUtau desktop application inside Safari.
 
-This is a compatibility-oriented rebuild, not a claim that the desktop OpenUtau application can run unchanged inside Safari.
+The guiding principle is:
 
-## Proposed hybrid architecture
+```
+Safari editor (JavaScript)
+        |
+   versioned API
+        |
+.NET service using reusable OpenUtau Core components
+        |
+       WAV
+```
+
+Keep the existing `main` branch and audio-analysis engine intact while the replacement is developed on a separate branch.
+
+## Architecture decisions
 
 ### 1. Safari client — JavaScript / HTML / CSS
 
-- Touch-friendly piano roll and timeline.
-- Note, lyric, phoneme, track, tempo, and voicebank editing.
-- Project save/load and undo/redo.
-- Audio preview and playback using Web Audio API.
-- Communicate with processing services through a versioned API.
-- Keep the UI responsive while rendering runs asynchronously.
+The browser owns the editing experience:
 
-### 2. Compatibility and synthesis service — .NET where it preserves OpenUtau code
+- Touch-friendly piano roll, timeline, track controls, lyric and note editing.
+- Project save/load, undo/redo, tempo, and voicebank selection.
+- Waveform display and playback using Web Audio API.
+- JSON-based communication with the backend.
+- Render-job status, progress, cancellation, and result playback.
 
-OpenUtau's core is C#/.NET. Prefer reusing compatible OpenUtau Core components behind a service boundary over manually rewriting complex phonemizer and rendering logic in Python or JavaScript.
+The editor UI will be implemented for Safari rather than porting OpenUtau's Avalonia desktop UI. React, Canvas, WebGL, and Tone.js are candidates, not mandatory dependencies; choose them only where they solve a concrete need. Start with the smallest reliable JavaScript stack.
 
-- Inspect and isolate the smallest reusable OpenUtau Core modules.
-- Preserve upstream license notices and audit third-party dependencies individually.
-- Expose project, singer, phonemizer, render-job, progress, cancellation, and audio-result APIs.
-- Run as a separate service/container if it cannot safely share the existing Python service.
+### 2. .NET singing service — reuse OpenUtau Core
 
-### 3. Python — API orchestration and analysis
+Keep the desktop UI and desktop-only layers out of the server design. Investigate and isolate the smallest reusable Core components behind a service boundary.
 
-- Keep the existing FastAPI audio-analysis API as a separate responsibility.
-- Handle upload validation, job coordination, metadata inspection, and analysis workflows.
-- Do not reimplement OpenUtau's phonemizer or renderer in Python merely to avoid .NET.
+Priority components to evaluate:
 
-### 4. C/C++ — DSP and browser acceleration
+- USTX project and note/track data model.
+- Voicebank/singer loading and oto.ini parsing.
+- Existing Japanese CV, VCV, CVVC, and other applicable phonemizers.
+- Resampler, wavtool, and phrase-rendering interfaces.
 
-- Retain portable DSP code where useful.
-- For browser-local compute, compile suitable C/C++ modules to WebAssembly with Emscripten.
-- Use JavaScript/Web Audio API for browser integration; evaluate AudioWorklet/WASM only after basic Safari playback works.
-- Do not assume desktop-native C extensions can run in Safari; Python extension modules and browser WebAssembly are different build targets.
+Expose narrow APIs for project validation/conversion, singer and voicebank information, phonemizer results, render-job creation/status/cancellation, and WAV retrieval.
 
-## Important platform constraints
+Do not rewrite OpenUtau phonemizers in Python or JavaScript unless a specific compatibility gap makes it unavoidable. Do not assume the entire Core can be hosted unchanged: isolate dependencies and verify runtime compatibility first.
 
-- Safari cannot load a native Python extension or desktop executable directly.
-- A C extension built for CPython is not a WebAssembly module.
-- WebAssembly can run in Safari, but browser APIs and real-time audio integration require JavaScript glue.
-- OpenUtau's desktop UI is based on Avalonia and is not a drop-in Safari UI.
-- OpenUtau Core targets modern .NET; compatibility, runtime packaging, and external resampler execution must be checked before choosing server-side deployment.
-- Avoid depending on long-running synchronous HTTP requests for rendering. Use render jobs with status/progress and cancellable work.
+### 3. Python FastAPI — orchestration and audio analysis
 
-## Migration stages
+Keep Python responsible for the existing audio-analysis service and suitable API/orchestration tasks:
 
-1. **Inventory and preservation**
-   - Keep the current main branch and existing analysis engine.
-   - Document current endpoints, project data, and tests.
-   - Record OpenUtau source revision and license/dependency inventory.
+- Upload validation and metadata inspection.
+- Audio analysis and conversion workflows.
+- Job coordination if it can be done cleanly without duplicating the .NET renderer.
+- Stable API boundary between Safari and backend services.
 
-2. **OpenUtau compatibility foundation**
-   - Study project/note/track models, singer/voicebank loading, oto parsing, phonemizer API, resampler interfaces, wavtool, and render pipeline.
-   - Add compatibility tests using synthetic fixtures; real voicebank archives are not required for this stage.
-   - Choose which components run in .NET service and which DSP routines can be ported to C/WASM.
+The .NET singing service should own OpenUtau-dependent singer, phonemizer, and rendering behavior. Avoid making FastAPI a second implementation of the singing engine.
 
-3. **Safari editor shell**
-   - Build the new editor separately from the existing prototype.
-   - Implement touch piano roll, note/lyric editing, track controls, and project serialization.
-   - Use mock render responses until the real renderer is connected.
+### 4. Rendering strategy
 
-4. **Voicebank and phonemizer**
-   - Implement voicebank import and oto compatibility.
-   - Add Japanese CV/VCV/CVVC behavior through compatible OpenUtau components.
-   - Test aliases, pitch mapping, preutterance, overlap, consonant, offset, and cutoff with generated fixtures.
+For the first working version, prefer server-side rendering through the reusable OpenUtau-compatible .NET pipeline. Safari submits a render job and later retrieves the WAV; it should not attempt to render a full song on the iPad.
 
-5. **Rendering**
-   - Connect the OpenUtau-compatible renderer.
-   - Add resampler and wavtool support, phrase pre-rendering, caching, cancellation, and playback.
-   - Validate note timing and sample boundaries before tuning voice quality.
+Treat rendering as an asynchronous job, not a long synchronous HTTP request. Include progress/status, cancellation, timeouts, temporary-file cleanup, and limits for concurrent jobs.
 
-6. **Integration and release**
-   - Connect the editor to the service APIs.
-   - Run automated tests and Safari/iPad manual tests.
-   - Switch the public Pages entry point only after the replacement is usable.
+Investigate the available OpenUtau rendering paths before choosing a permanent backend:
+- Reuse compatible OpenUtau resampler/wavtool interfaces where they are required for voicebank compatibility.
+- Evaluate the WORLD-based or other modern rendering path as a future option, rather than committing to a custom renderer before a baseline can sing.
+- Do not assume Windows `.exe` resamplers can run on a Linux Render service. Each resampler and wavtool must be checked for platform support, license, and packaging requirements.
+
+A first milestone is one correctly timed note/phrase rendered from a supported voicebank. Full-song rendering comes later.
+
+### 5. C/C++ and WebAssembly — defer
+
+WebAssembly is not a requirement for the initial release. Do not port DSP code to WASM merely because the client is Safari.
+
+The existing CPython native extension is not directly usable in a browser. If a later requirement justifies browser-local DSP or offline operation, evaluate portable C/C++ modules compiled with Emscripten and integrated through JavaScript/Web Audio API. AudioWorklet/WASM is a later optimization, not a foundation dependency.
+
+## Voicebank compatibility
+
+Use OpenUtau's existing phonemizer behavior wherever possible. Do not create a parallel VoiceBankStudio phonemizer for supported formats.
+
+Implement and test in this order:
+
+1. Load voicebank metadata and oto.ini.
+2. Resolve aliases and pitch mapping and use the oto parameters during phoneme/render preparation.
+3. Support the relevant Japanese CV/VCV/CVVC workflows through reusable OpenUtau phonemizers.
+4. Add oto.ini editing and assistance only after loading and playback are reliable.
+5. Consider automatic oto generation as a later feature.
+
+Keep voicebank loading/usage separate from the audio-analysis and oto-editing tools. Validate offset, consonant, cutoff, preutterance, overlap, alias selection, and pitch mapping.
+
+## Licensing and dependency audit
+
+Before copying or shipping code, record the exact upstream OpenUtau revision and review its license and notices. Audit dependencies individually, including transitive dependencies and any external resamplers/wavtools. Do not assume that every dependency has the same license as OpenUtau.
+
+Preserve required copyright and license notices. Confirm whether each component can be redistributed and hosted in the intended server environment. In particular, do not bundle UTAU's original resampler or other third-party executables without verifying their license and redistribution terms.
+
+## Deployment constraints
+
+- Safari cannot run a desktop .NET application or native CPython extension directly.
+- OpenUtau's Avalonia desktop UI is not a Safari UI.
+- A server-side .NET service is the initial rendering target, subject to Linux/runtime/dependency compatibility checks.
+- Render free/small server plans may not handle many simultaneous or long renders. Add job limits and measure memory/CPU before promising multi-track or real-time performance.
+- Keep audio responses as WAV initially; optimize transport and caching after correctness is established.
+
+## Development sequence
+
+### Phase 0 — inventory and licensing
+- Preserve `main` and the current analysis implementation.
+- Record OpenUtau source revision, Core dependencies, licenses, and Linux compatibility.
+- Identify the smallest Core components needed for a first render.
+
+### Phase 1 — file and voicebank foundation
+- Read and validate USTX.
+- Load voicebank metadata and oto.ini.
+- Resolve aliases and pitch mapping.
+- Add synthetic-fixture tests; a user voicebank archive is not required for this phase.
+
+### Phase 2 — Safari editor foundation
+- Build the new editor shell separately from the current prototype.
+- Add project state, tracks, piano roll, note/lyric editing, and save/load.
+- Use mock render responses while the real engine is not connected.
+
+### Phase 3 — first real render
+- Host the selected OpenUtau Core components in a .NET service.
+- Connect singer loading and Japanese phonemizer output.
+- Render a single note/phrase and verify sample boundaries and timing.
+- Add asynchronous render jobs and WAV playback.
+
+### Phase 4 — full-song rendering and editing
+- Add phrase rendering, caching, cancellation, multi-note and multi-track handling.
+- Improve editing controls and project compatibility.
+- Measure server resource use and enforce sensible limits.
+
+### Phase 5 — iPad/Safari validation
+- Test touch interactions, audio playback, long projects, backgrounding, and network failures on actual Safari/iPad.
+- Switch the public Pages entry point only after the replacement is usable.
+
+### Phase 6 — advanced tools
+- Add oto editing assistance, audio analysis integration, optional DSP/WASM acceleration, and automatic oto generation as separate later milestones.
 
 ## Testing rules
 
-- Test every feature before moving on.
-- Clearly distinguish unit tests, service integration tests, and actual iPad/Safari playback tests.
-- Do not claim real voicebank singing has been validated without a real voicebank archive and listening test.
-- Synthetic fixtures can validate parsing, timing math, API contracts, and render scheduling without user voicebank files.
+- Test each feature before moving to the next.
+- Separate unit tests, .NET service integration tests, browser tests, and actual iPad/Safari listening tests.
+- Synthetic fixtures can validate parsing, alias selection, timing calculations, API contracts, and render scheduling.
+- Never claim real voicebank singing is validated until an actual voicebank has been loaded and the resulting audio has been listened to.
+- Record known limitations, especially unsupported resamplers, voicebank formats, and server resource limits.
 
 ## Current status
 
-Planning and source inspection only. No replacement editor or OpenUtau renderer has been integrated yet.
+Architecture planning and source inspection only. No replacement editor or OpenUtau renderer has been integrated yet. The first implementation milestone is USTX/voicebank/oto loading and a minimal server-side single-phrase render—not a full browser port or a WASM renderer.
