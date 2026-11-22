@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from voicebankstudio_audio import AudioAnalysisError, analyze_wav
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
-MAX_DURATION_SECONDS = 180
+MAX_DURATION_SECONDS = 600
 OUTPUT_RATE = 22050
 ALLOWED_EXTENSIONS = {
     ".wav", ".wave", ".mp3", ".flac", ".m4a", ".aac",
@@ -68,7 +68,7 @@ def convert_to_analysis_wav(source_path: str, output_path: str) -> float:
                         sample_count = frame.samples
                         total_samples += sample_count
                         if total_samples > MAX_DURATION_SECONDS * OUTPUT_RATE:
-                            raise OverflowError("音源は3分以内にしてください。")
+                            raise OverflowError("音源は10分以内にしてください。")
                         wav_out.writeframesraw(pcm_bytes)
 
                 for decoded_frame in container.decode(stream):
