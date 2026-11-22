@@ -124,7 +124,8 @@ $('serverAnalyzeBatch').addEventListener('click',async()=>{
    const outcome=await new Promise(resolve=>uploadAudioFile(f,false,resolve));
    if(outcome.ok){
      const r=outcome.result;
-     const pitch=(r.pitch_frames||[]).filter(x=>x.note).slice(0,8).map(x=>x.note).join(', ')||'音程未検出';\n     summaries.push('✓ '+f.name+' — '+r.duration_seconds+'秒 / BPM '+(r.tempo_bpm||'未検出')+' / Peak '+r.peak+' / RMS '+r.rms+' / 音程 '+pitch);
+     const pitch=(r.pitch_frames||[]).filter(x=>x.note).slice(0,8).map(x=>x.note).join(', ')||'音程未検出';
+     summaries.push('✓ '+f.name+' — '+r.duration_seconds+'秒 / BPM '+(r.tempo_bpm||'未検出')+' / Peak '+r.peak+' / RMS '+r.rms+' / 音程 '+pitch);
    }else summaries.push('× '+f.name+' — '+outcome.error);
    $('batchResults').textContent='進捗 '+(i+1)+' / '+files.length+'\\n'+summaries.join('\\n');
  }
