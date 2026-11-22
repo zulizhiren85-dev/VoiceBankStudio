@@ -2,6 +2,7 @@ using System.Reflection;
 using OpenUtau.Api;
 using VoiceBankStudio.Engine;
 using Microsoft.AspNetCore.Http.Features;
+using System.Threading.RateLimiting;
 
 const string serviceName = "VoiceBankStudio.Engine";
 const string openUtauRevision = "08222cb7c48c4ab47faa34a6efc34e2c00898a1e";
@@ -18,6 +19,17 @@ var allowedOrigins = (Environment.GetEnvironmentVariable("VOICEBANKSTUDIO_ALLOWE
 builder.Services.AddCors(options => options.AddPolicy("voicebankstudio", policy =>
     policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddSingleton<HeadlessOpenUtauHost>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("voicebank-uploads", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+        limiter.AutoReplenishment = true;
+    });
+});
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 270L * 1024 * 1024;
@@ -28,6 +40,7 @@ builder.Services.Configure<FormOptions>(options =>
 });
 var app = builder.Build();
 app.UseCors("voicebankstudio");
+app.UseRateLimiter();
 
 (string[] Found, string[] Missing, string? Error) InspectPhonemizers()
 {
@@ -71,9 +84,11 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.MapPost("/api/v1/voicebanks/inspect", VoicebankArchiveInspector.InspectAsync)
-    .DisableAntiforgery();
+    .DisableAntiforgery()
+    .RequireRateLimiting("voicebank-uploads");
 app.MapPost("/api/v1/render", VoicebankRenderEndpoint.RenderAsync)
-    .DisableAntiforgery();
+    .DisableAntiforgery()
+    .RequireRateLimiting("voicebank-uploads");
 
 app.MapGet("/health", () => Results.Ok(new
 {
