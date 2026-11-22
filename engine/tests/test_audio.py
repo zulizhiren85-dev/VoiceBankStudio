@@ -72,6 +72,30 @@ class AudioAnalysisTests(unittest.TestCase):
             result = analyze_wav(path)
             self.assertAlmostEqual(result["tempo_bpm"], 120.0, delta=2.0)
 
+    def test_peak_detects_transient_between_decimated_pitch_samples(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "transient.wav"
+            rate = 44100
+            frames = bytearray(rate // 4 * 2)
+            # Put a single peak on an odd source frame; the former stride-2
+            # metric sampling could skip it entirely.
+            frames[1 * 2:1 * 2 + 2] = int(30000).to_bytes(2, "little", signed=True)
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(1)
+                wav.setsampwidth(2)
+                wav.setframerate(rate)
+                wav.writeframes(frames)
+            result = analyze_wav(path)
+            self.assertGreater(result["peak"], 0.9)
+
+    def test_short_trailing_audio_is_included_in_analyzed_duration(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "trailing.wav"
+            self.make_tone(path, seconds=0.53, rate=16000)
+            result = analyze_wav(path)
+            self.assertAlmostEqual(result["analyzed_seconds"], 0.53, delta=0.002)
+            self.assertAlmostEqual(result["duration_seconds"], 0.53, delta=0.002)
+
     def test_source_file_is_not_modified(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "tone.wav"
