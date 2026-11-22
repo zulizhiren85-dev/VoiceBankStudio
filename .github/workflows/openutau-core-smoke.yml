@@ -115,3 +115,6 @@ jobs:
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
             --configuration Release \
             -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
+
+      - name: Build deployable engine container
+        run: docker build --file engine-dotnet/service/Dockerfile --tag voicebankstudio-engine:ci .
