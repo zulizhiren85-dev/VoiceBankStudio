@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from voicebankstudio_audio import AudioAnalysisError, analyze_wav
 
-MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 MAX_DURATION_SECONDS = 180
 OUTPUT_RATE = 22050
 ALLOWED_EXTENSIONS = {
@@ -105,7 +105,7 @@ async def analyze(file: Annotated[UploadFile, File(...)]) -> dict:
                     break
                 total += len(chunk)
                 if total > MAX_UPLOAD_BYTES:
-                    raise HTTPException(status_code=413, detail="音源は25MB以下にしてください。")
+                    raise HTTPException(status_code=413, detail="音源は100MB以下にしてください。")
                 temp.write(chunk)
 
         if total == 0:
