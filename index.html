@@ -93,7 +93,14 @@ $('checkAudio').onclick=()=>{const ok=syncAudioPicker();if(!ok){$('fileInfo').te
 $('loadAudio').onclick=()=>{const f=(audioPicker.files&&audioPicker.files.length)?audioPicker.files[0]:null;$('fileInfo').textContent='読み込みボタンを押しました。ファイルを確認しています…';if(!f){$('fileInfo').textContent='ファイルがまだ渡されていません。上のファイル欄から選び直してください。';$('analysis').textContent='ファイル選択情報が見つかりません。';return}$('analysis').textContent='読み込み処理を開始しました: '+f.name;handleAudioSelection(f).catch(err=>{$('analysis').textContent='読み込み処理エラー: '+(err&&err.message?err.message:String(err));});};
 function syncAudioPicker(){const f=audioPicker.files&&audioPicker.files.length?audioPicker.files[0]:null;if(!f)return false;$('fileInfo').textContent='選択済み: '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB。「選択した音源を読み込む」または「サーバーへ送って解析」を押してください。';$('analysis').textContent='ファイルを選択しました。';$('serverAnalyze').disabled=false;return true}
 function onAudioPickerChanged(){if(!syncAudioPicker()){$('fileInfo').textContent='ファイル選択画面から戻りました。ファイルが選択されているか確認してください。';return}const f=audioPicker.files&&audioPicker.files[0];if(f&&f!==lastAutoUploadFile){lastAutoUploadFile=f;uploadAudioFile(f,true)}}
-audioPicker.addEventListener('change',(event)=>{\n  const selected=event.currentTarget.files && event.currentTarget.files.length ? event.currentTarget.files[0] : null;\n  if(!selected){$('fileInfo').textContent='ファイルが選択されていません。';return;}\n  $('fileInfo').textContent='選択済み: '+selected.name+' / '+(selected.size/1024/1024).toFixed(1)+' MB';\n  $('analysis').textContent='ファイル情報を受け取りました。送信確認を待っています。';\n  $('serverAnalyze').disabled=false;\n  if(selected!==lastAutoUploadFile){lastAutoUploadFile=selected;uploadAudioFile(selected,true);}\n});
+audioPicker.addEventListener('change',(event)=>{
+  const selected=event.currentTarget.files && event.currentTarget.files.length ? event.currentTarget.files[0] : null;
+  if(!selected){$('fileInfo').textContent='ファイルが選択されていません。';return;}
+  $('fileInfo').textContent='選択済み: '+selected.name+' / '+(selected.size/1024/1024).toFixed(1)+' MB';
+  $('analysis').textContent='ファイル情報を受け取りました。送信確認を待っています。';
+  $('serverAnalyze').disabled=false;
+  if(selected!==lastAutoUploadFile){lastAutoUploadFile=selected;uploadAudioFile(selected,true);}
+});
 // iPad Safariではファイル選択画面から戻った直後に反映が遅れる場合があるため再確認
 window.addEventListener('focus',()=>{setTimeout(syncAudioPicker,300)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(syncAudioPicker,300)});
