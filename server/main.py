@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Annotated
 
 import av
-import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
