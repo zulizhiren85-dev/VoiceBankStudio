@@ -117,7 +117,7 @@ function vowelOf(s){
 }
 function aliasKey(s){
  return String(s||"").normalize("NFC").trim().toLowerCase()
-  .replaceAll("\\t"," ").replaceAll("\\r"," ").replaceAll("\\n"," ")
+  .replaceAll("\t"," ").replaceAll("\r"," ").replaceAll("\n"," ")
   .split(" ").filter(Boolean).join(" ");
 }
 function pitchNumber(p){
