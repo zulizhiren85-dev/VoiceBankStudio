@@ -58,6 +58,43 @@ jobs:
           curl --fail --silent http://127.0.0.1:5088/api/v1/engine/status | tee /tmp/vbs-engine-status.json
           grep -q '"phonemizersReady":true' /tmp/vbs-engine-status.json
 
+
+      - name: Create synthetic UTAU voicebank fixture
+        run: |
+          python3 - <<'PY'
+          import math, os, struct, wave
+          root = "/tmp/vbs-fixture/Voicebank"
+          os.makedirs(root, exist_ok=True)
+          with open(os.path.join(root, "character.txt"), "w", encoding="ascii") as f:
+              f.write("name=VoiceBankStudio CI Fixture\\n")
+          with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
+              f.write("a.wav=あ,0,100,0,0,0\\n")
+          with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
+              wav.setnchannels(1)
+              wav.setsampwidth(2)
+              wav.setframerate(22050)
+              frames = [int(5000 * math.sin(2 * math.pi * 220 * i / 22050)) for i in range(4410)]
+              wav.writeframes(b"".join(struct.pack("<h", sample) for sample in frames))
+          PY
+          cd /tmp/vbs-fixture
+          zip -qr /tmp/vbs-testbank.zip Voicebank
+
+      - name: Verify OpenUtau singer loading and VCV phonemizing
+        run: |
+          curl --fail --silent \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            http://127.0.0.1:5088/api/v1/voicebanks/inspect \
+            > /tmp/vbs-voicebank-result.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/vbs-voicebank-result.json", encoding="utf-8") as f:
+              result = json.load(f)
+          assert result["loaded"] is True, result
+          assert result["otoCount"] == 1, result
+          assert result["vcvPhonemesForTestNote"] == ["あ"], result
+          print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
+          PY
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
