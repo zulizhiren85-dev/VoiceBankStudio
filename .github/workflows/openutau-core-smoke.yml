@@ -191,6 +191,29 @@ jobs:
           print(f"Two-note CVVC render succeeded: {len(samples)} samples")
           PY
 
+
+      - name: Verify prefix.map high-pitch rendering
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":72,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-high-pitch-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-high-pitch-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-high-pitch-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
+          assert len(samples) > 20000 and any(sample != 0 for sample in samples), "high-pitch render failed"
+          print("OpenUtau prefix.map high-pitch render: OK")
+          PY
+
       - name: Build and run Core/Builtin smoke test
         run: |
           dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
