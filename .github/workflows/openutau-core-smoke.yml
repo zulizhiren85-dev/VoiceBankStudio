@@ -223,6 +223,36 @@ jobs:
       - name: Build deployable engine container
         run: docker build --file engine-dotnet/service/Dockerfile --tag voicebankstudio-engine:ci .
 
+
+      - name: Run Docker engine under a 512 MiB memory limit
+        run: |
+          docker run --detach --name vbs-engine-ci --memory=512m --publish 5089:10000 voicebankstudio-engine:ci
+          trap 'docker rm --force vbs-engine-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5089/health; then
+              break
+            fi
+            sleep 2
+          done
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5089/api/v1/render \
+            --output /tmp/vbs-docker-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-docker-render-response.bin
+            docker logs vbs-engine-ci
+            exit 1
+          fi
+          python3 - <<'PY'
+          data = open("/tmp/vbs-docker-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "Docker engine did not return WAV"
+          assert len(data) > 44 and any(data[44:]), "Docker engine WAV is empty or silent"
+          print(f"Docker engine rendered a WAV under 512 MiB: {len(data)} bytes")
+          PY
+
       - name: Stop HTTP engine service
         if: always()
         run: |
