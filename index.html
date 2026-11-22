@@ -39,7 +39,7 @@
 <p class="muted">ZIPまたは音源フォルダを選択。oto.iniを解析し、エイリアス・原音設定を表示してWAVを個別試聴します。音源データは端末内だけで処理し、サーバーへ送信しません。</p>
 <div class="toolbar"><label class="filebtn">ZIP音源を読み込む<input id="vbZip" type="file" accept=".zip,application/zip" class="hidden"></label><label class="filebtn">音源フォルダを読み込む<input id="vbFolder" type="file" webkitdirectory directory multiple class="hidden"></label><button id="vbClear" type="button">読み込み解除</button></div>
 <div id="vbSummary" class="muted" style="margin-top:10px">音源はまだ読み込まれていません。</div><div id="vbStatus" class="status" style="margin-top:8px">ZIPまたはフォルダを選択してください。</div><audio id="vbAudio" controls class="hidden" style="width:100%;margin-top:8px"></audio><div id="vbRows" class="vb-list"></div>
-<p class="small">ベータ0.3：VCVエイリアス（例：a か）を前の音の母音から検索し、oto.iniの先行発声・オーバーラップを使って音をつなぎます。単独音・VCVの基本的な試験再生に対応します。UTAU本体と同等のresamplerや完全な音素連結ではありません。iPadのSafariでフォルダ選択が動作しない場合はZIPを使用してください。</p></section>
+<p class="small">ベータ0.4：VCVエイリアス（例：a か）を前の音の母音から検索し、oto.iniの先行発声・オーバーラップを使って音をつなぎます。単独音・VCVの基本的な試験再生に対応します。UTAU本体と同等のresamplerや完全な音素連結ではありません。iPadのSafariでフォルダ選択が動作しない場合はZIPを使用してください。</p></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -215,4 +215,4 @@ $('voicePlay').addEventListener('click',async()=>{
  catch(err){$('msg').textContent='歌声再生エラー：'+(err&&err.message?err.message:String(err));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=47f33c9" defer></script></body></html>
+</script><script src="voicebank.js?v=42d79eb" defer></script></body></html>
