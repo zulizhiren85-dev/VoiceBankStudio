@@ -48,7 +48,7 @@ jobs:
             --no-build --configuration Release \
             -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau" > /tmp/vbs-engine.log 2>&1 &
           service_pid=$!
-          trap 'kill "$service_pid" 2>/dev/null || true' EXIT
+          echo "$service_pid" > /tmp/vbs-engine.pid
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:5088/health; then
               break
@@ -142,3 +142,14 @@ jobs:
 
       - name: Build deployable engine container
         run: docker build --file engine-dotnet/service/Dockerfile --tag voicebankstudio-engine:ci .
+
+      - name: Stop HTTP engine service
+        if: always()
+        run: |
+          if [ -f /tmp/vbs-engine.pid ]; then
+            kill "$(cat /tmp/vbs-engine.pid)" 2>/dev/null || true
+          fi
+
+      - name: Show engine logs on failure
+        if: failure()
+        run: cat /tmp/vbs-engine.log || true
