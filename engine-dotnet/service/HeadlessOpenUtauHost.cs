@@ -88,7 +88,9 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         if (!double.IsFinite(bpm) || bpm is < 40 or > 300)
             throw new ArgumentException("BPMは40〜300の範囲にしてください。");
 
-        var state = await OnEngineThread(() =>
+        try
+        {
+            var state = await OnEngineThread(() =>
         {
             var project = new UProject();
             Ustx.AddDefaultExpressions(project);
@@ -133,8 +135,6 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             return (project, part);
         });
 
-        try
-        {
             var deadline = DateTime.UtcNow.AddSeconds(30);
             RenderPhrase[] phrases = Array.Empty<RenderPhrase>();
             while (DateTime.UtcNow < deadline)
@@ -193,30 +193,37 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         }
         finally
         {
-            await OnEngineThread(() =>
+            try
             {
-                DocManager.Inst.ExecuteCmd(new LoadProjectNotification(new UProject()));
-                var cachePath = PathManager.Inst.CachePath;
-                try
+                await OnEngineThread(() =>
                 {
-                    if (Directory.Exists(cachePath))
+                    DocManager.Inst.ExecuteCmd(new LoadProjectNotification(new UProject()));
+                    var cachePath = PathManager.Inst.CachePath;
+                    try
                     {
-                        foreach (var file in Directory.EnumerateFiles(cachePath))
+                        if (Directory.Exists(cachePath))
                         {
-                            try { File.Delete(file); } catch { }
-                        }
-                        foreach (var directory in Directory.EnumerateDirectories(cachePath))
-                        {
-                            try { Directory.Delete(directory, recursive: true); } catch { }
+                            foreach (var file in Directory.EnumerateFiles(cachePath))
+                            {
+                                try { File.Delete(file); } catch { }
+                            }
+                            foreach (var directory in Directory.EnumerateDirectories(cachePath))
+                            {
+                                try { Directory.Delete(directory, recursive: true); } catch { }
+                            }
                         }
                     }
-                }
-                catch
-                {
-                    // Cache cleanup is best-effort; the uploaded voicebank folder is still deleted by the request handler.
-                }
-                return true;
-            });
+                    catch
+                    {
+                        // Cache cleanup is best-effort; the uploaded voicebank folder is still deleted by the request handler.
+                    }
+                    return true;
+                });
+            }
+            catch
+            {
+                // Keep the original render error if the engine is already shutting down.
+            }
         }
     }
 
