@@ -23,6 +23,7 @@ struct AudioAnalysisResult: Sendable {
 enum AudioAnalysisError: LocalizedError {
     case unsupportedFormat
     case emptyAudio
+    case bufferAllocationFailed
 
     var errorDescription: String? {
         switch self {
@@ -30,6 +31,8 @@ enum AudioAnalysisError: LocalizedError {
             return "この音声形式は端末内解析に対応していません。"
         case .emptyAudio:
             return "音声データが空か、読み込めませんでした。"
+        case .bufferAllocationFailed:
+            return "解析用メモリを確保できませんでした。ほかのアプリを閉じて再試行してください。"
         }
     }
 }
@@ -50,7 +53,9 @@ enum AudioAnalysisService {
             throw AudioAnalysisError.unsupportedFormat
         }
 
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkCapacity)!
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkCapacity) else {
+            throw AudioAnalysisError.bufferAllocationFailed
+        }
         var peak = 0.0
         var sumSquares = 0.0
         var sampleCount: Int64 = 0
