@@ -23,7 +23,7 @@ public static class VoicebankRenderEndpoint
         [FromForm] string notesJson,
         [FromForm] double bpm,
         [FromForm] string? phonemizer,
-        HeadlessOpenUtauHost host,
+        [FromServices] HeadlessOpenUtauHost host,
         CancellationToken cancellationToken)
     {
         if (archive is null || archive.Length == 0)
