@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const state={entries:new Map(),files:new Map(),rows:[],audioUrl:null,archive:null};
-const MAX_ARCHIVE=500*1024*1024,MAX_ENTRIES=30000,MAX_TEXT=8*1024*1024;
+const MAX_ARCHIVE=1024*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
 const norm=s=>String(s||"").replace(/\\/g,"/").replace(/^\/+/,"");
 function parseOto(text,prefix){
  const rows=[],lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
@@ -22,7 +22,7 @@ async function inflateRaw(bytes){
  catch(e){throw Error("ZIPの圧縮方式を展開できません。通常のZIP形式か確認してください。");}
 }
 async function readZip(blob){
- if(blob.size>MAX_ARCHIVE)throw Error("ZIPは500MB以下のものを選択してください。");
+ if(blob.size>MAX_ARCHIVE)throw Error("ZIPは1GB以下のものを選択してください。");
  const tail=await blob.slice(Math.max(0,blob.size-65557)).arrayBuffer(),v=new DataView(tail);let end=-1;
  for(let i=tail.byteLength-22;i>=0;i--)if(v.getUint32(i,true)===0x06054b50){end=i;break;}
  if(end<0)throw Error("ZIPの目次が見つかりません。破損または非対応形式の可能性があります。");
@@ -38,7 +38,7 @@ async function readZip(blob){
    if(name.split("/").some(x=>x===".."||x==="."))throw Error("不正なファイルパスを含むZIPです。");
    if(flags&1)throw Error("暗号化ZIPには対応していません。");
    if(method!==0&&method!==8)throw Error("未対応の圧縮方式を含んでいます。");
-   total+=usize;if(total>1024*1024*1024)throw Error("展開後の合計サイズが1GBを超えます。");
+   total+=usize;if(total>2*1024*1024*1024)throw Error("展開後の合計サイズが2GBを超えます。");
    entries.set(name,{name,method,csize,usize,local});
   }
   p+=46+nl+el+cl;
@@ -76,7 +76,7 @@ async function loadFiles(files,mode){
  if(mode==="zip"){
   state.archive=list[0];state.entries=await readZip(list[0]);const oto=[...state.entries.values()].filter(e=>e.name.toLowerCase().endsWith("oto.ini"));
   if(!oto.length)throw Error("ZIP内にoto.iniが見つかりません。音源フォルダごとZIPにしてください。");
-  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます。");const raw=await(await zipFile(e)).arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}const dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
+  for(const e of oto){if(e.usize>MAX_TEXT)throw Error("oto.iniが大きすぎます（16MB上限）。");const raw=await(await zipFile(e)).arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(raw);}catch(_){txt=new TextDecoder("shift_jis").decode(raw);}const dir=e.name.slice(0,e.name.lastIndexOf("/")+1);state.rows.push(...parseOto(txt,dir));}
  }else{
   for(const f of list){const path=norm(f.webkitRelativePath||f.name);if(path.toLowerCase().endsWith(".wav"))state.files.set(path,f);}
   const oto=list.filter(f=>f.name.toLowerCase()==="oto.ini");if(!oto.length)throw Error("選択フォルダ内にoto.iniが見つかりません。音源の一番上のフォルダを選択してください。");
