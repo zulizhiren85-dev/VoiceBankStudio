@@ -98,9 +98,10 @@ app.MapGet("/api/v1/engine/status", () =>
         },
         voicebankInspectionAvailable = true,
         renderingApiAvailable = true,
+        singleNoteRenderVerified = true,
         renderingReady = false,
         phonemizersReady = inspection.Missing.Length == 0 && inspection.Error is null,
-        note = "This endpoint verifies Core/Builtin assembly loading only. It does not load a voicebank or render audio.",
+        note = "This status endpoint reports assembly and phonemizer availability. Use /api/v1/voicebanks/inspect to inspect a ZIP voicebank and /api/v1/render to render WAV audio.",
         error = inspection.Error,
     });
 });
