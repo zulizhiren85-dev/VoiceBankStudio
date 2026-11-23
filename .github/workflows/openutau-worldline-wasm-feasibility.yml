@@ -127,8 +127,9 @@ jobs:
           WASM_DIR="bazel-bin/worldline/worldline-wasm-smoke"
           WASM_JS="$WASM_DIR/worldline_wasm_smoke_binary.js"
           test -f "$WASM_JS"
-          node "$WASM_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          node "$GITHUB_WORKSPACE/scripts/run-worldline-wasm-smoke.cjs" "$WASM_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
           grep -q "WORLDLINE_WASM_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          grep -q "WORLDLINE_WASM_NODE_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
           find "$WASM_DIR" -maxdepth 1 -type f \\( -name '*.wasm' -o -name '*.js' \\) \\
             -exec cp {} "$RUNNER_TEMP/worldline-probe/" \\;
 
