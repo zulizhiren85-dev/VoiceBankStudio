@@ -290,12 +290,12 @@ jobs:
           assert len(data) > 44 and any(data[44:]), "Docker engine WAV is empty or silent"
           print(f"Docker engine rendered a WAV under 512 MiB: {len(data)} bytes")
           PY
-          status=$(curl --silent --show-error --write-out "%{http_code}" \\
-            -F "archive=@/tmp/vbs-testbank.zip" \\
-            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480}]' \\
-            -F "bpm=120" \\
-            -F "phonemizer=ja-vcv" \\
-            http://127.0.0.1:5089/api/v1/render \\
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5089/api/v1/render \
             --output /tmp/vbs-docker-parallel-render.wav)
           if [ "$status" != "200" ]; then
             cat /tmp/vbs-docker-parallel-render.wav
