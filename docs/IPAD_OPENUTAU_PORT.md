@@ -161,3 +161,15 @@ The Emscripten work is a feasibility milestone, not a claim that the current Baz
 - Build the closest feasible browser-targeted OpenUtau C# Core slice while preserving upstream source and phonemizer logic.
 - Add tests proving the same Japanese VCV/CVVC aliases and timing are produced as the server reference.
 - Only after both parts pass, connect the Core to the Worldline WASM bridge and attempt a short offline-rendered phrase.
+
+
+## Implementation log — 2026-11-23
+
+Started the first reproducible build investigation without modifying OpenUtau synthesis behavior.
+
+- Added `.github/workflows/openutau-worldline-wasm-feasibility.yml`.
+- The workflow checks out the exact pinned upstream revision, installs Bazelisk and Emscripten, builds the upstream native `//worldline` target as a reference, and uploads the transitive Bazel dependency graph and toolchain evidence.
+- This first CI milestone intentionally does not label a compiler smoke test as a successful Worldline WASM port. The actual Emscripten target will be added only after the native dependency graph and build assumptions are verified.
+- No Render service configuration, paid plan, production deployment, or main-branch content was changed.
+
+Next: use the uploaded dependency graph to add a dedicated Emscripten build target that reuses upstream Worldline sources and algorithms, then compare a deterministic WASM render against the native reference.
