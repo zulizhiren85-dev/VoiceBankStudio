@@ -185,3 +185,27 @@ Next: use the uploaded dependency graph to add a dedicated Emscripten build targ
 - Native server singing remains unchanged as the fallback. No production deployment, paid Render change, or main-branch merge was performed.
 
 Next: test the new button in iPad Safari, then replace the fixture entry point with the production C ABI adapter and port the minimal Japanese phonemizer/Core slice.
+
+## Browser Worldline C ABI milestone (2026-11-23)
+
+A separate production-oriented C ABI source has been added at
+`scripts/worldline-wasm-api.cpp`. It deliberately does not include a test
+`main()` and exposes two caller-memory-owned operations:
+
+- Query the expected output capacity for a PCM buffer.
+- Analyze a mono PCM buffer with upstream Worldline, preserve its spectral
+  analysis, shift the voiced F0 contour to a requested MIDI tone, and synthesize
+  PCM through upstream WORLD synthesis.
+
+The Node harness at `scripts/run-worldline-wasm-api.cjs` is intended to verify
+a 220 Hz input rendered toward MIDI 69 (A4), finite/non-silent output, and
+approximate output pitch. CI builds this API as a separate Emscripten target
+from the existing analysis/synthesis smoke target.
+
+**Important boundary:** this is a pitch-shift DSP primitive, not OpenUtau's
+complete `Worldline.Resample(item)` implementation. It does not yet load oto
+samples/FRQ, apply oto offset/cutoff, construct note-specific envelopes,
+handle duration stretching, or render a sequence of phonemes. The actual
+OpenUtau phrase pipeline and browser voicebank filesystem still need to be
+ported and validated. No local iPad UTAU singing claim should be made until
+those pieces pass browser and real-voicebank tests.
