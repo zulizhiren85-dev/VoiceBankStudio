@@ -42,6 +42,23 @@
 <div id="urlStatus" class="status" style="margin-top:10px">URLを入力すると、対応サービスと取り込み手順を案内します。</div>
 <div id="videoPreview" class="hidden" style="margin-top:10px"><div class="small" style="margin-bottom:6px">YouTubeプレビュー（再生はYouTube上で行われます）</div><div style="position:relative;width:100%;aspect-ratio:16/9;background:#101b2b;border-radius:10px;overflow:hidden"><iframe id="youtubeFrame" title="YouTube動画プレビュー" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div><p class="small">動画の音声データはアプリから読み取れません。解析には、利用可能な音源ファイルを上の②から別途読み込んでください。</p></div>
 </section>
+<section class="panel" id="voicebankCreate"><h2>③ 原音作成ベータ 0.1</h2>
+<p class="muted">iPadのマイクで録音、または既存の録音WAVを読み込み、原音ファイルとoto.iniの基本行を作成します。録音データはこの端末内で処理します。現段階は単独音の録音・手動原音設定が中心で、自動oto推定・連続音リスト録音・ZIP一括出力は未実装です。</p>
+<div class="toolbar"><label>エイリアス<input id="vbCreateAlias" type="text" maxlength="80" value="あ" placeholder="例：あ / a か"></label><label>WAVファイル名<input id="vbCreateFilename" type="text" maxlength="100" value="あ.wav"></label></div>
+<div class="toolbar"><button id="vbCreateRecord" type="button">● 録音開始</button><button id="vbCreateStop" type="button" disabled>■ 録音停止</button><label class="filebtn">録音済み音声を読み込む<input id="vbCreateImport" type="file" accept=".wav,.wave,audio/*" class="hidden"></label></div>
+<div id="vbCreateStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">マイク録音または音声ファイルの読み込みを待っています。</div>
+<audio id="vbCreatePreview" controls class="hidden" style="width:100%;margin-top:8px"></audio>
+<div class="settings" style="margin-top:10px">
+<label>オフセット (ms)<input id="vbOtoOffset" type="number" step="0.1" value="0"></label>
+<label>固定範囲・子音部 (ms)<input id="vbOtoConsonant" type="number" step="0.1" value="100"></label>
+<label>右ブランク (ms)<input id="vbOtoCutoff" type="number" step="0.1" value="-100"></label>
+<label>先行発声 (ms)<input id="vbOtoPreutterance" type="number" step="0.1" value="80"></label>
+<label>オーバーラップ (ms)<input id="vbOtoOverlap" type="number" step="0.1" value="30"></label>
+</div>
+<div class="toolbar" style="margin-top:10px"><button id="vbCreateAdd" class="primary" type="button" disabled>原音リストに追加</button><button id="vbCreateDownloadWav" type="button" disabled>WAVを保存</button><button id="vbCreateDownloadOto" type="button" disabled>oto.iniを保存</button></div>
+<div id="vbCreateList" class="status" style="margin-top:8px" aria-live="polite">登録した原音はここに表示されます。</div>
+<p class="small">oto.iniの並びは「ファイル名=エイリアス,オフセット,固定範囲,右ブランク,先行発声,オーバーラップ」です。値はミリ秒。数値は手動調整が必要です。OpenUtauで読み込んで発音確認する工程は今後追加します。</p>
+</section>
 <section class="panel"><h2>④ プロジェクト保存・読み込み</h2><div class="toolbar"><button class="primary" id="save">プロジェクトを保存</button><label class="filebtn">プロジェクトを読み込む<input id="load" type="file" accept=".json,application/json" class="hidden"></label></div><p class="small">音符・BPM・拍子をJSON形式で保存します。音声ファイル自体は含みません。</p><div id="msg" class="muted" aria-live="polite"></div></section>
 
 <section class="panel" id="voicebankBeta"><h2>⑤ UTAU音源ベータ 0.1</h2>
@@ -516,4 +533,4 @@ $('worldlineWasmTest').addEventListener('click',async()=>{
  }catch(err){status.textContent='WASMテスト失敗：'+(err&&err.message?err.message:String(err));}
  finally{btn.disabled=false;}
 });
-</script><script src="assets/worldline/worldline_wasm_smoke_binary.js" defer></script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>
+</script><script src="assets/worldline/worldline_wasm_smoke_binary.js" defer></script><script src="voicebank-create.js?v=20261123-01" defer></script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>
