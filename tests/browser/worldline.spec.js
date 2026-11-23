@@ -1,4 +1,7 @@
+const { test, expect } = require("@playwright/test");
+
 test("Worldline WASM runs inside the browser and returns deterministic DSP output", async ({ page }) => {
+  await page.goto("/");
   await expect(page.locator("#worldlineWasmTest")).toBeVisible();
   await page.locator("#worldlineWasmTest").click();
   await expect(page.locator("#worldlineWasmStatus")).toContainText(
