@@ -118,7 +118,7 @@ The current server branch pins upstream OpenUtau revision `08222cb7c48c4ab47faa3
 - `OpenUtau.Core.csproj` targets .NET 10 and references a broad desktop-oriented dependency set, including SDL3 bindings, DBus, System.Drawing, audio/file codecs, SharpCompress, NumSharp, and ONNX Runtime platform-specific packages. A browser build should not reference the full project unchanged.
 - `OpenUtau.Core/Render/Worldline.cs` uses many `DllImport("worldline")` entry points. These include F0 analysis, WORLD analysis/synthesis, and related operations. The browser bridge must replace this native P/Invoke boundary; simply compiling the C# Core for WebAssembly is not sufficient.
 - The C++ Worldline target is defined in `cpp/worldline/BUILD.bazel`. It depends on the Worldline common/F0/model libraries and the external WORLD library. The exported API is a relatively narrow C ABI, which is promising for a separate Emscripten module, but its dependencies still need to be checked for browser compatibility.
-- The native C++ target currently builds a shared library for desktop platforms. The upstream build guide documents DLL/dylib/SO outputs, not an Emscripten target. Therefore WASM compilation remains an experiment, not a confirmed supported build.
+- The upstream native target is still desktop-oriented, but a separate experimental Bazel/Emscripten target now compiles the pinned Worldline source into a browser-loadable JavaScript/WASM pair. This is a local port target, not an upstream-supported build configuration.
 - The C# Core also has direct desktop/process assumptions beyond Worldline. A reduced browser-targeted project or carefully maintained fork is more realistic than trying to compile the whole Core project.
 
 ### Updated implementation boundary
@@ -127,7 +127,7 @@ Do not start by porting the whole Core assembly. First create a small browser-ta
 
 ### Immediate engineering task
 
-Create an Emscripten build experiment for the pinned `cpp/worldline` target, initially exporting only the F0/WORLD analysis and synthesis functions required by the Worldline C# wrapper. Add a tiny deterministic input fixture and verify the output is finite, non-empty PCM. In parallel, compile a minimal .NET browser project containing one existing Japanese phonemizer and compare aliases against the existing server smoke test. These are independent proof points and should be kept separate until both pass.
+The Worldline Emscripten proof-of-concept now compiles and passes a deterministic F0/WORLD analysis+synthesis fixture in Node. Next, create a production-oriented WASM target without the smoke-test main function, then compile a minimal .NET browser project containing one existing Japanese phonemizer and compare aliases against the existing server smoke test. Keep these independent proof points separate until both pass.
 
 
 ## Server HTTP 429 diagnosis (2026-11-23)
@@ -152,15 +152,15 @@ The user's preference is to change OpenUtau as little as possible. Prefer a sour
 4. Keep source revisions pinned and maintain upstream license/copyright notices. Track any local patches separately so they can be rebased.
 5. Avoid broad rewrites of pitch, phoneme, oto timing, overlap, envelope, or phrase scheduling. Add regression fixtures comparing browser output and the native server reference.
 
-The Emscripten work is a feasibility milestone, not a claim that the current Bazel target can already be built for the browser. Its dependencies (including WORLD and Abseil-related code) must be verified and any unsupported platform calls isolated.
+The current Emscripten proof-of-concept builds the Worldline library and its WORLD dependency while deliberately excluding the audio-device output target. It proves the core DSP can run under WASM, but it is not yet the production C# interop module or a complete local singing engine.
 
 ## Immediate next milestones
 
-- Build a minimal Emscripten Worldline module from the pinned upstream C++ source, exporting the required analysis/synthesis ABI.
-- Verify it against a deterministic WAV fixture in a normal desktop browser first, then iPad Safari.
+- Replace the smoke-test entry point with a production WASM module and a narrow JavaScript adapter matching the C# Worldline ABI.
+- Verify the module in iPad Safari using the new “端末内Worldline WASMテスト” button.
 - Build the closest feasible browser-targeted OpenUtau C# Core slice while preserving upstream source and phonemizer logic.
 - Add tests proving the same Japanese VCV/CVVC aliases and timing are produced as the server reference.
-- Only after both parts pass, connect the Core to the Worldline WASM bridge and attempt a short offline-rendered phrase.
+- Connect the Core to the Worldline WASM bridge and attempt a short offline-rendered phrase.
 
 
 ## Implementation log — 2026-11-23
@@ -173,3 +173,15 @@ Started the first reproducible build investigation without modifying OpenUtau sy
 - No Render service configuration, paid plan, production deployment, or main-branch content was changed.
 
 Next: use the uploaded dependency graph to add a dedicated Emscripten build target that reuses upstream Worldline sources and algorithms, then compare a deterministic WASM render against the native reference.
+
+
+## Implementation log update — 2026-11-23: Worldline WASM proof-of-concept
+
+- The pinned upstream OpenUtau revision `08222cb7c48c4ab47faa34a6efc34e2c00898a1e` now compiles through an experimental Emscripten 4.0.6 Bazel target.
+- The browser target links the upstream `worldline_lib` and omits the desktop audio-output/miniaudio target.
+- A deterministic 220 Hz sine fixture passed F0 estimation and WORLD analysis/synthesis under WASM. CI output: mean F0 `219.36 Hz`, `51` frames, `11001` output samples, peak amplitude `0.393935`.
+- The validated smoke bundle is checked into `assets/worldline/` (`worldline_wasm_smoke_binary.js` and `worldline_wasm_smoke_binary.wasm`; approximately 65 KB + 596 KB).
+- The web UI now has a “端末内Worldline WASMテスト” button that invokes the WASM module in the browser. This verifies the DSP proof-of-concept only; it does not yet sing a UTAU voicebank locally.
+- Native server singing remains unchanged as the fallback. No production deployment, paid Render change, or main-branch merge was performed.
+
+Next: test the new button in iPad Safari, then replace the fixture entry point with the production C ABI adapter and port the minimal Japanese phonemizer/Core slice.
