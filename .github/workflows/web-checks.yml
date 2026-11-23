@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check voicebank.js
+        run: node --check voicebank.js\n          node --check voicebank-create.js
       - name: Check inline app JavaScript
         run: |
           python - <<'PY'
@@ -54,8 +54,8 @@ jobs:
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
           js = Path("voicebank.js").read_text(encoding="utf-8")
-          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=20261122-800mib1\"", "id=\"voicePlay\"", "id=\"downloadRender\"", "id=\"phonemizer\"", "OPENUTAU_ENGINE_API", "/api/v1/render", "notesJson", "id=\"analysisToSong\"", "端末内で簡易解析（通信なし）", "Peak：", "pitchFrames", "count=Math.min(600", "multiple", "id=\"serverAnalyzeBatch\"", "function refreshBatchPicker", "uploadAudioFile(f,false,resolve)"]
-          required_js = ["oto.ini", "preutterance", "overlap", "DecompressionStream", "webkitRelativePath", "playNotes", "getArchiveFile", "VoiceBankStudioVoicebank", "function aliasKey", "function chooseRow", "// Beta playback is monophonic", "const endAt=next?Math.min(nominalEnd,nextStart):nominalEnd;", "\"* \"+target", "\"- \"+target", "\"ん\""]
+          required_html = ["id=\"voicebankBeta\"", "id=\"vbZip\"", "id=\"vbFolder\"", "src=\"voicebank.js?v=20261122-800mib1\"", "id=\"voicePlay\"", "id=\"downloadRender\"", "id=\"phonemizer\"", "OPENUTAU_ENGINE_API", "/api/v1/render", "notesJson", "id=\"analysisToSong\"", "id=\"voicebankCreate\"", "id=\"vbCreateRecord\"", "id=\"vbCreateStop\"", "id=\"vbCreateImport\"", "id=\"vbCreateAdd\"", "id=\"vbCreateDownloadOto\"", "src=\"voicebank-create.js?v=20261123-01\"", "端末内で簡易解析（通信なし）", "Peak：", "pitchFrames", "count=Math.min(600", "multiple", "id=\"serverAnalyzeBatch\"", "function refreshBatchPicker", "uploadAudioFile(f,false,resolve)"]
+          required_js = ["oto.ini", "preutterance", "overlap", "DecompressionStream", "webkitRelativePath", "playNotes", "getArchiveFile", "VoiceBankStudioVoicebank", "function aliasKey", "function chooseRow", "encodeMonoWav", "function makeOtoIni", "// Beta playback is monophonic", "const endAt=next?Math.min(nominalEnd,nextStart):nominalEnd;", "\"* \"+target", "\"- \"+target", "\"ん\""]
           missing = [item for item in required_html if item not in html] + [item for item in required_js if item not in js]
           if missing:
               raise SystemExit("Missing beta integration items: " + ", ".join(missing))
