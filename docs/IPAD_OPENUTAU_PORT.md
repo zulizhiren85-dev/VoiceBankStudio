@@ -109,3 +109,22 @@ The deployed beta still performs singing renders on the .NET server. This docume
 - OpenUtau Worldline wrapper: https://github.com/openutau/OpenUtau/blob/master/OpenUtau.Core/Classic/WorldlineResampler.cs
 - OpenUtau renderer / resampler overview: https://github.com/openutau/OpenUtau/wiki/Resamplers-and-Wavtools
 - OpenUtau license: MIT; audit dependency and native artifact licenses separately before redistribution.
+
+
+## Source-level findings (pinned revision)
+
+The current server branch pins upstream OpenUtau revision `08222cb7c48c4ab47faa34a6efc34e2c00898a1e`. Inspection of that revision found:
+
+- `OpenUtau.Core.csproj` targets .NET 10 and references a broad desktop-oriented dependency set, including SDL3 bindings, DBus, System.Drawing, audio/file codecs, SharpCompress, NumSharp, and ONNX Runtime platform-specific packages. A browser build should not reference the full project unchanged.
+- `OpenUtau.Core/Render/Worldline.cs` uses many `DllImport("worldline")` entry points. These include F0 analysis, WORLD analysis/synthesis, and related operations. The browser bridge must replace this native P/Invoke boundary; simply compiling the C# Core for WebAssembly is not sufficient.
+- The C++ Worldline target is defined in `cpp/worldline/BUILD.bazel`. It depends on the Worldline common/F0/model libraries and the external WORLD library. The exported API is a relatively narrow C ABI, which is promising for a separate Emscripten module, but its dependencies still need to be checked for browser compatibility.
+- The native C++ target currently builds a shared library for desktop platforms. The upstream build guide documents DLL/dylib/SO outputs, not an Emscripten target. Therefore WASM compilation remains an experiment, not a confirmed supported build.
+- The C# Core also has direct desktop/process assumptions beyond Worldline. A reduced browser-targeted project or carefully maintained fork is more realistic than trying to compile the whole Core project.
+
+### Updated implementation boundary
+
+Do not start by porting the whole Core assembly. First create a small browser-targeted project containing only the portable note/phoneme/voicebank logic needed by Japanese CV/VCV/CVVC. Replace filesystem access with a virtual voicebank file provider and replace Worldline P/Invoke with a JS/WASM adapter. Keep unsupported desktop features out of this project.
+
+### Immediate engineering task
+
+Create an Emscripten build experiment for the pinned `cpp/worldline` target, initially exporting only the F0/WORLD analysis and synthesis functions required by the Worldline C# wrapper. Add a tiny deterministic input fixture and verify the output is finite, non-empty PCM. In parallel, compile a minimal .NET browser project containing one existing Japanese phonemizer and compare aliases against the existing server smoke test. These are independent proof points and should be kept separate until both pass.
