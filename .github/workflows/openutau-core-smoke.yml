@@ -103,7 +103,8 @@ jobs:
           # The fixture maps only C4 and C5; unmapped B4 must use OpenUtau fallback.
           assert pitch_map[71]["alias"] == "あ", pitch_map[71]
           assert pitch_map[72]["alias"] == "high_あ", pitch_map[72]
-          assert pitch_map[84]["alias"] == "high_あ", pitch_map[84]
+          # The fixture maps C5 only; C6 is outside that subbank and falls back.
+          assert pitch_map[84]["alias"] == "あ", pitch_map[84]
           assert pitch_map[60]["file"] == "a.wav", pitch_map[60]
           print("OpenUtau voicebank + VCV + pitch-aware prefix.map source selection: OK")
           PY
