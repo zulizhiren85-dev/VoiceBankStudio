@@ -443,7 +443,7 @@ $('voicePlay').addEventListener('click',async()=>{
   renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
   report('歌声の生成が完了しました。iPadのSafariでは自動再生が制限されるため、「生成した歌声を再生」を押してください。');
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
- finally{confirmVoicePlay.checked=false;btn.disabled=true;}
+ finally{confirmVoicePlay.checked=false;setButtonReady(btn,false);btn.textContent='UTAU音源で歌う（確認後に有効）';$('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';}
 });
 $('worldlineWasmTest').addEventListener('click',async()=>{
  const btn=$('worldlineWasmTest'),status=$('worldlineWasmStatus');
