@@ -167,6 +167,8 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             // Render one phrase at a time. Keeping every phrase buffer alive until
             // Task.WhenAll completes caused large peak memory usage on the free instance.
             // Mix each phrase immediately, then let its temporary sample buffer go.
+            logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
+                phrases.Length, 1);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             float[] mixed = Array.Empty<float>();
             int totalSamples = 0;
