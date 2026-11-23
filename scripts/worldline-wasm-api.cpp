@@ -11,7 +11,7 @@ extern "C" {
 int vbs_worldline_output_capacity(int sample_count, int sample_rate) {
   if (sample_count <= 0 || sample_rate < 8000 || sample_rate > 192000) return 0;
   constexpr int hop = 220;
-  constexpr double frame_ms = static_cast<double>(hop) * 1000.0 / 44100.0;
+  const double frame_ms = static_cast<double>(hop) * 1000.0 / sample_rate;
   const int frames = F0FrameCount(sample_count, sample_rate, frame_ms, 0);
   if (frames <= 0) return 0;
   return WorldSynthesisSampleCount(frames, frame_ms, sample_rate);
