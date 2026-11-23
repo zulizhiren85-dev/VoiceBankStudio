@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 
 test("OpenUtau server readiness check reports available phonemizers", async ({ page }) => {
+  await page.locator("#diagnostics summary").click();
   await page.route("**/health", route => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok" }),
   }));
@@ -31,6 +32,7 @@ test("OpenUtau server readiness check reports available phonemizers", async ({ p
 });
 
 test("main interface loads without uncaught page errors", async ({ page }) => {
+  await page.locator("#diagnostics summary").click();
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await expect(page.locator("#notes .note")).toHaveCount(42);
@@ -113,6 +115,34 @@ test("video URL registration validates service and enables preview", async ({ pa
   await expect(page.locator("#youtubeFrame")).toHaveAttribute("src", /youtube-nocookie\.com\/embed/);
 });
 
+
+
+test("singing can be force-cancelled while the voicebank upload is active", async ({ page }) => {
+  const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
+  let registrationStartedResolve;
+  const registrationStarted = new Promise(resolve => { registrationStartedResolve = resolve; });
+  await page.route("**/api/v1/voicebanks/register", async route => {
+    registrationStartedResolve();
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ archiveId: "cancel-test-voicebank" }),
+      });
+    } catch (_) {}
+  });
+  await page.locator("#vbZip").setInputFiles(zipPath);
+  await expect(page.locator("#vbStatus")).toContainText("読み込み完了", { timeout: 15000 });
+  await page.locator("#confirmVoicePlay").check();
+  await page.locator("#voicePlay").click();
+  await registrationStarted;
+  await expect(page.locator("#cancelVoiceRender")).toBeVisible();
+  await page.locator("#cancelVoiceRender").click();
+  await expect(page.locator("#voicePlayStatus")).toContainText("歌唱処理を強制終了しました");
+  await expect(page.locator("#confirmVoicePlay")).not.toBeChecked();
+  await expect(page.locator("#voicePlay")).toBeDisabled();
+});
 
 test("singing UI registers a voicebank and sends the edited score to OpenUtau", async ({ page }) => {
   const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
