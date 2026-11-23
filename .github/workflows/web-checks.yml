@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - "index.html"
-      - "voicebank.js"\n      - "voicebank-create.js"
+      - "voicebank.js"
+      - "voicebank-create.js"
       - ".github/workflows/web-checks.yml"
   pull_request:
     paths:
       - "index.html"
       - "voicebank.js"
+      - "voicebank-create.js"
       - ".github/workflows/web-checks.yml"
 
 jobs:
