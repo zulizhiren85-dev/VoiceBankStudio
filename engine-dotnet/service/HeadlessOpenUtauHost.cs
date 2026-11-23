@@ -164,80 +164,58 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                 throw new InvalidOperationException("OpenUtauの音素変換またはフレーズ生成が30秒以内に完了しませんでした。");
             }
 
-            // Parallelize only short, independent phrases. The free Render instance
-            // is memory-constrained, so long phrases remain sequential.
-            int parallelism = phrases.Length > 1 &&
-                phrases.All(phrase => phrase.durationMs <= 1500 && phrase.phones.Length <= 8)
-                ? 2 : 1;
-            logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
-                phrases.Length, parallelism);
+            // Render one phrase at a time. Keeping every phrase buffer alive until
+            // Task.WhenAll completes caused large peak memory usage on the free instance.
+            // Mix each phrase immediately, then let its temporary sample buffer go.
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            using var renderSlots = new SemaphoreSlim(parallelism, parallelism);
-
-            var phraseTasks = phrases.Select(async (phrase, index) =>
-            {
-                var slotAcquired = false;
-                try
-                {
-                    await renderSlots.WaitAsync(renderCancellation.Token);
-                    slotAcquired = true;
-                    renderCancellation.Token.ThrowIfCancellationRequested();
-                    // Each phrase gets its own renderer instance; OpenUtau's cache
-                    // locks protect shared phrase WAVs and each phrase owns its synth.
-                    var renderer = new WorldlineRenderer(version: 10);
-                    logger.LogInformation("Worldline render started. Phrase={PhraseIndex}/{PhraseCount}, Phones={PhoneCount}",
-                        index + 1, phrases.Length, phrase.phones.Length);
-                    var renderStartedAt = DateTime.UtcNow;
-                    var result = await renderer.Render(
-                        phrase,
-                        new Progress(Math.Max(1, phrase.phones.Length)),
-                        trackNo: 0,
-                        cancellation: renderCancellation,
-                        isPreRender: false);
-                    var elapsedMs = (DateTime.UtcNow - renderStartedAt).TotalMilliseconds;
-                    var phraseSamples = result.samples;
-                    logger.LogInformation("Worldline render completed. Phrase={PhraseIndex}/{PhraseCount}, Samples={SampleCount}, ElapsedMs={ElapsedMs}",
-                        index + 1, phrases.Length, phraseSamples?.Length ?? 0, elapsedMs);
-
-                    if (phraseSamples is null || phraseSamples.Length == 0)
-                        throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
-
-                    int startSample = (int)Math.Round((result.positionMs - result.leadingMs) * 44100 / 1000.0);
-                    int sourceOffset = Math.Max(0, -startSample);
-                    int destinationStart = Math.Max(0, startSample);
-                    int available = phraseSamples.Length - sourceOffset;
-                    if (available <= 0)
-                        return (Start: 0, Samples: Array.Empty<float>());
-                    return (Start: destinationStart, Samples: phraseSamples.Skip(sourceOffset).ToArray());
-                }
-                catch
-                {
-                    // Stop sibling phrases immediately when one phrase fails. This
-                    // avoids wasting CPU on audio that can no longer be returned.
-                    renderCancellation.Cancel();
-                    throw;
-                }
-                finally
-                {
-                    if (slotAcquired)
-                        renderSlots.Release();
-                }
-            }).ToArray();
-
-            var renderedPhrases = await Task.WhenAll(phraseTasks);
+            float[] mixed = Array.Empty<float>();
             int totalSamples = 0;
-            foreach (var rendered in renderedPhrases)
-                totalSamples = Math.Max(totalSamples, rendered.Start + rendered.Samples.Length);
+            for (int index = 0; index < phrases.Length; index++)
+            {
+                renderCancellation.Token.ThrowIfCancellationRequested();
+                var phrase = phrases[index];
+                var renderer = new WorldlineRenderer(version: 10);
+                logger.LogInformation("Worldline render started. Phrase={PhraseIndex}/{PhraseCount}, Phones={PhoneCount}",
+                    index + 1, phrases.Length, phrase.phones.Length);
+                var renderStartedAt = DateTime.UtcNow;
+                var result = await renderer.Render(
+                    phrase,
+                    new Progress(Math.Max(1, phrase.phones.Length)),
+                    trackNo: 0,
+                    cancellation: renderCancellation,
+                    isPreRender: false);
+                var elapsedMs = (DateTime.UtcNow - renderStartedAt).TotalMilliseconds;
+                var phraseSamples = result.samples;
+                logger.LogInformation("Worldline render completed. Phrase={PhraseIndex}/{PhraseCount}, Samples={SampleCount}, ElapsedMs={ElapsedMs}",
+                    index + 1, phrases.Length, phraseSamples?.Length ?? 0, elapsedMs);
+
+                if (phraseSamples is null || phraseSamples.Length == 0)
+                    throw new InvalidOperationException("OpenUtauレンダラーから音声データが返りませんでした。");
+
+                int startSample = (int)Math.Round((result.positionMs - result.leadingMs) * 44100 / 1000.0);
+                int sourceOffset = Math.Max(0, -startSample);
+                int destinationStart = Math.Max(0, startSample);
+                int available = phraseSamples.Length - sourceOffset;
+                if (available <= 0)
+                    continue;
+
+                int requiredSamples = checked(destinationStart + available);
+                if (requiredSamples > mixed.Length)
+                {
+                    int capacity = Math.Max(requiredSamples, mixed.Length == 0 ? 4096 : checked(mixed.Length * 2));
+                    Array.Resize(ref mixed, capacity);
+                }
+
+                for (int i = 0; i < available; i++)
+                    mixed[destinationStart + i] += phraseSamples[sourceOffset + i];
+                totalSamples = Math.Max(totalSamples, requiredSamples);
+            }
 
             if (totalSamples == 0)
                 throw new InvalidOperationException("OpenUtauレンダラーから有効な音声データが返りませんでした。");
 
-            var mixed = new float[totalSamples];
-            foreach (var rendered in renderedPhrases)
-            {
-                for (int i = 0; i < rendered.Samples.Length; i++)
-                    mixed[rendered.Start + i] += rendered.Samples[i];
-            }
+            if (mixed.Length != totalSamples)
+                Array.Resize(ref mixed, totalSamples);
             logger.LogInformation("OpenUtau render completed. TotalSamples={TotalSamples}", mixed.Length);
             return mixed;
         }
