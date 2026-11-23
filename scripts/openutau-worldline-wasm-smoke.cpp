@@ -1,5 +1,6 @@
 #include "worldline.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <vector>
