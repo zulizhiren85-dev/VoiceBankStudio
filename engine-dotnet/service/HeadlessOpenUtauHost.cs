@@ -166,14 +166,9 @@ public sealed class HeadlessOpenUtauHost : IDisposable
 
             // Parallelize only short, independent phrases. The free Render instance
             // is memory-constrained, so long phrases remain sequential.
-            // Trial up to three independent short phrases; long/heavy phrases stay sequential.
-            // The 512 MiB container smoke test verifies that this cap remains memory-safe.
-            int parallelism = phrases.Length >= 3 &&
+            int parallelism = phrases.Length > 1 &&
                 phrases.All(phrase => phrase.durationMs <= 1500 && phrase.phones.Length <= 8)
-                ? 3
-                : phrases.Length == 2 &&
-                  phrases.All(phrase => phrase.durationMs <= 1500 && phrase.phones.Length <= 8)
-                    ? 2 : 1;
+                ? 2 : 1;
             logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
                 phrases.Length, parallelism);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
