@@ -307,7 +307,7 @@ jobs:
           PY
           status=$(curl --silent --show-error --write-out "%{http_code}" \
             -F "archive=@/tmp/vbs-testbank.zip" \
-            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480}]' \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480},{"lyric":"あ","tone":60,"position":3840,"duration":480}]' \
             -F "bpm=120" \
             -F "phonemizer=ja-vcv" \
             http://127.0.0.1:5089/api/v1/render \
@@ -325,7 +325,7 @@ jobs:
           assert len(samples) > 100000 and any(samples), "parallel Docker render was empty or silent"
           print(f"Three-phrase parallel render succeeded under 512 MiB: {len(samples)} samples")
           PY
-          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=2, Parallelism=2"
+          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=3"
           test "$(docker inspect --format '{{.State.OOMKilled}}' vbs-engine-ci)" = "false"
           echo "Three-way bounded parallel phrase rendering stayed alive under the 512 MiB container limit."
 
