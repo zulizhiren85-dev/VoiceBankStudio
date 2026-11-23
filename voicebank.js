@@ -136,7 +136,20 @@ async function loadFiles(files,mode,options={}){
 }
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbFolder").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"folder");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
-$("vbClear").addEventListener("click",()=>{deleteVoicebankArchive().catch(()=>{});stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
+$("vbClear").addEventListener("click",async()=>{
+ $("vbClear").disabled=true;
+ $("vbStatus").textContent="端末内の保存音源を削除しています…";
+ try{
+  await deleteVoicebankArchive();
+  stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;
+  if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);
+  state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");
+  $("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";
+  $("vbStatus").textContent="端末内保存データを削除しました。";
+ }catch(error){
+  $("vbStatus").textContent="端末内保存データの削除に失敗しました: "+error.message;
+ }finally{$("vbClear").disabled=false;}
+});
 
 const decodedCache=new Map();let synthContext=null,synthSources=[];
 function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
