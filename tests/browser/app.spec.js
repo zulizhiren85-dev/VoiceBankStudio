@@ -88,6 +88,44 @@ test("local audio import and analysis work with a WAV fixture", async ({ page })
   await expect(page.locator("#msg")).toContainText("仮メロディ");
 });
 
+test("local analysis mixes stereo channels and reports denser pitch samples", async ({ page }) => {
+  const sampleRate = 16000;
+  const sampleCount = sampleRate * 1.5;
+  const wav = Buffer.alloc(44 + sampleCount * 4);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(2, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 4, 28);
+  wav.writeUInt16LE(4, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(sampleCount * 4, 40);
+  for (let i = 0; i < sampleCount; i++) {
+    const right = Math.round(0.5 * 32767 * Math.sin(2 * Math.PI * 220 * i / sampleRate));
+    wav.writeInt16LE(0, 44 + i * 4);
+    wav.writeInt16LE(right, 46 + i * 4);
+  }
+
+  await page.locator("#audioFile").setInputFiles({
+    name: "right-channel-tone.wav",
+    mimeType: "audio/wav",
+    buffer: wav,
+  });
+  await page.locator("#loadAudio").click();
+  await expect(page.locator("#fileInfo")).toContainText("段階4/4 成功", { timeout: 15000 });
+  await page.locator("#analyze").click();
+  await expect(page.locator("#analysis")).toContainText("解析ベータ完了", { timeout: 15000 });
+  await expect(page.locator("#analysis")).toContainText("A3");
+  await expect(page.locator("#analysis")).toContainText("入力チャンネル：2ch");
+  await expect(page.locator("#analysis")).toContainText("解析間隔は最大約0.1秒");
+  await expect(page.locator("#analysisToSong")).toBeEnabled();
+});
+
 test("voicebank ZIP loads oto.ini aliases and exposes valid WAV preview", async ({ page }) => {
   const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
   await page.locator("#vbZip").setInputFiles(zipPath);
