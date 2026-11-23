@@ -42,12 +42,6 @@ jobs:
           sudo install "$RUNNER_TEMP/bazelisk" /usr/local/bin/bazel
           bazel --version
 
-      - name: Install Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: "latest"
-          actions-cache-folder: "emsdk-cache"
-
       - name: Record compiler and upstream build metadata
         working-directory: ${{ runner.temp }}/OpenUtau/cpp
         run: |
@@ -80,6 +74,56 @@ jobs:
             | sort > "$RUNNER_TEMP/worldline-probe/worldline-dependencies.txt"
           bazel cquery //worldline --output=files \
             > "$RUNNER_TEMP/worldline-probe/native-output-files.txt"
+
+      - name: Prepare pinned Emscripten Bazel target
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          set -euo pipefail
+          cat >> MODULE.bazel <<'EOF'
+
+          # Isolated browser-port experiment; the upstream revision remains pinned.
+          bazel_dep(name = "emsdk", version = "4.0.6")
+          EOF
+          cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
+          sed -i '1i load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")' worldline/BUILD.bazel
+          cat >> worldline/BUILD.bazel <<'EOF'
+
+          # Experimental browser target: link the synthesis library only.
+          # Deliberately omit audio_output_lib / miniaudio device access.
+          cc_binary(
+              name = "worldline_wasm_smoke_binary",
+              srcs = ["worldline_wasm_smoke.cpp"],
+              deps = [":worldline_lib"],
+              linkopts = [
+                  "-sALLOW_MEMORY_GROWTH=1",
+                  "-sENVIRONMENT=web,worker,node",
+                  "-sMODULARIZE=1",
+                  "-sEXPORT_NAME=WorldlineModule",
+                  "-sEXPORTED_FUNCTIONS=['_main','_malloc','_free','_F0FrameCount','_F0','_DecodeMgc','_DecodeBap','_InitAnalysisConfig','_WorldAnalysisF0In','_WorldSynthesisSampleCount','_WorldSynthesis','_HnAnalysisF0In','_WorldSynthesisContinuousNoise']",
+                  "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']",
+                  "-sWASM_BIGINT=1",
+              ],
+          )
+
+          wasm_cc_binary(
+              name = "worldline-wasm-smoke",
+              cc_target = ":worldline_wasm_smoke_binary",
+          )
+          EOF
+
+      - name: Build upstream Worldline as WebAssembly
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          set -euo pipefail
+          USE_BAZEL_VERSION=7.4.1 bazel --version
+          USE_BAZEL_VERSION=7.4.1 bazel build //worldline:worldline-wasm-smoke
+          find bazel-bin/worldline -maxdepth 2 -type f -print | sort
+          WASM_JS="$(find bazel-bin/worldline -maxdepth 2 -type f -name '*worldline-wasm-smoke*.js' | head -n 1)"
+          test -n "$WASM_JS"
+          node "$WASM_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          grep -q "WORLDLINE_WASM_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          find bazel-bin/worldline -maxdepth 2 -type f \\( -name '*.wasm' -o -name '*worldline-wasm-smoke*.js' \\) \\
+            -exec cp {} "$RUNNER_TEMP/worldline-probe/" \\;
 
       - name: Upload feasibility evidence
         if: always()
