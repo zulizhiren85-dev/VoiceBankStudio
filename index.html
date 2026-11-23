@@ -350,12 +350,12 @@ async function registerVoicebankArchive(archive,report){
  report('音源ZIPをサーバーへ初回登録しています…');
  const form=new FormData();form.append('archive',archive,archive.name||'voicebank.zip');
  const result=await new Promise((resolve,reject)=>{
-  const xhr=new XMLHttpRequest();xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/voicebanks/register');xhr.responseType='json';xhr.timeout=15*60*1000;
+  const xhr=new XMLHttpRequest();activeVoiceRenderXhr=xhr;xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/voicebanks/register');xhr.responseType='json';xhr.timeout=15*60*1000;
   xhr.upload.onprogress=e=>{if(e.lengthComputable){const percent=Math.floor(e.loaded/e.total*100);report('音源を初回送信中… '+percent+'%（'+(e.loaded/1024/1024).toFixed(1)+' / '+(e.total/1024/1024).toFixed(1)+' MB）');}};
-  xhr.onload=()=>{const body=xhr.response||{};if(xhr.status>=200&&xhr.status<300&&body.archiveId)resolve(body);else reject(new Error(body.error||body.detail||('音源登録エラー HTTP '+xhr.status)));};
-  xhr.onerror=()=>reject(new Error('音源登録中に通信が切断されました。通信状態を確認して再試行してください。'));
-  xhr.ontimeout=()=>reject(new Error('音源登録がタイムアウトしました。もう一度お試しください。'));
-  xhr.onabort=()=>reject(new Error('音源登録が中断されました。'));
+  xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;const body=xhr.response||{};if(xhr.status>=200&&xhr.status<300&&body.archiveId)resolve(body);else reject(new Error(body.error||body.detail||('音源登録エラー HTTP '+xhr.status)));};
+  xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録中に通信が切断されました。通信状態を確認して再試行してください。'));};
+  xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録がタイムアウトしました。もう一度お試しください。'));};
+  xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録が中断されました。'));};
   xhr.send(form);
  });
  registeredArchiveObject=archive;registeredArchiveId=result.archiveId;
@@ -471,8 +471,8 @@ $('voicePlay').addEventListener('click',async()=>{
   if(renderedAudio){renderedAudio.pause();renderedAudio.src='';renderedAudio=null;}
   if(renderedAudioUrl)URL.revokeObjectURL(renderedAudioUrl);
   renderedAudioUrl=URL.createObjectURL(blob);
-  updateRenderButtons();
   renderedAudio=new Audio(renderedAudioUrl);
+  updateRenderButtons();
   renderedAudio.preload='auto';
   renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
   renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
