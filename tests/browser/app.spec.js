@@ -50,7 +50,8 @@ test("local audio import and analysis work with a WAV fixture", async ({ page })
   const wavPath = path.join(__dirname, "fixtures", "test-tone.wav");
   await page.locator("#audioFile").setInputFiles(wavPath);
   await page.locator("#loadAudio").click();
-  await expect(page.locator("#fileInfo")).toContainText("読み込み完了", { timeout: 15000 });
+  await expect(page.locator("#fileInfo")).toContainText("段階4/4 成功", { timeout: 15000 });
+  await expect(page.locator("#analysis")).toContainText("読み込み完了", { timeout: 15000 });
   await expect(page.locator("#analyze")).toBeEnabled();
   await page.locator("#analyze").click();
   await expect(page.locator("#analysis")).toContainText("解析ベータ完了", { timeout: 15000 });
