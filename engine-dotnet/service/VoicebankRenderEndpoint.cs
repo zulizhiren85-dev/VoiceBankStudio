@@ -49,16 +49,21 @@ public static class VoicebankRenderEndpoint
         bool extractionCacheHit = false;
         try
         {
-            if (archive is null && !VoicebankArchiveCache.TryGetPath(archiveId, out cachedArchivePath))
-                return Results.NotFound(new { error = "音源の一時登録が期限切れです。音源をもう一度登録してください。" });
-
-            if (archive is null && VoicebankArchiveCache.TryGetExtractedPath(archiveId, out var cachedExtractRoot))
+            if (archive is null)
             {
-                extractRoot = cachedExtractRoot;
-                extractionCacheHit = true;
-                logger.LogInformation("Using cached extracted voicebank. ArchiveIdPresent={ArchiveIdPresent}", true);
+                if (VoicebankArchiveCache.TryGetExtractedPath(archiveId, out var cachedExtractRoot))
+                {
+                    extractRoot = cachedExtractRoot;
+                    extractionCacheHit = true;
+                    logger.LogInformation("Using cached extracted voicebank. ArchiveIdPresent={ArchiveIdPresent}", true);
+                }
+                else if (!VoicebankArchiveCache.TryGetPath(archiveId, out cachedArchivePath))
+                {
+                    return Results.NotFound(new { error = "音源IDが無効または期限切れです。音源をもう一度登録してください。" });
+                }
             }
-            else
+
+            if (!extractionCacheHit)
             {
                 Directory.CreateDirectory(extractRoot);
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
