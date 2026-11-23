@@ -332,20 +332,34 @@ $('voicePlay').addEventListener('click',async()=>{
   for(let i=1;i<orderedNotes.length;i++){if(orderedNotes[i].position<orderedNotes[i-1].position+orderedNotes[i-1].duration)throw Error('現在は音符の重なりに未対応です。開始拍をずらして単旋律にしてください。');}
   if((registeredArchiveObject!==archive||!registeredArchiveId)&&!restoreRegisteredVoicebank(archive))await registerVoicebankArchive(archive,report);
   report(songNotes.length+' 音の譜面をOpenUtauへ送信しています（音源ZIPの再送信なし）…');
-  let response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/render',{method:'POST',body:createRenderForm(registeredArchiveId,songNotes,bpm)});
-  if(response.status===404){
+  const sendRenderRequest=(form)=>{
+   return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/render');
+    xhr.responseType='blob';
+    xhr.timeout=15*60*1000;
+    xhr.onload=()=>resolve({status:xhr.status,blob:xhr.response});
+    xhr.onerror=()=>reject(new Error('歌唱サーバーとの通信に失敗しました。CORS設定またはネットワーク接続を確認してください。'));
+    xhr.ontimeout=()=>reject(new Error('歌唱処理が15分でタイムアウトしました。サーバー側の処理時間を確認します。'));
+    xhr.onabort=()=>reject(new Error('歌唱リクエストが中断されました。'));
+    xhr.send(form);
+   });
+  };
+  report('OpenUtauが42音などの譜面を処理しています。音源の大きさや音符数によって数分かかる場合があります。画面を閉じずにお待ちください…');
+  let renderResult=await sendRenderRequest(createRenderForm(registeredArchiveId,songNotes,bpm));
+  if(renderResult.status===404){
    try{sessionStorage.removeItem(voicebankSessionKey(archive));}catch(_){}
    registeredArchiveId=null;registeredArchiveObject=null;
    await registerVoicebankArchive(archive,report);
    report('音源を再登録しました。譜面をレンダリングしています…');
-   response=await fetch(OPENUTAU_ENGINE_API+'/api/v1/render',{method:'POST',body:createRenderForm(registeredArchiveId,songNotes,bpm)});
+   renderResult=await sendRenderRequest(createRenderForm(registeredArchiveId,songNotes,bpm));
   }
-  if(!response.ok){
-   let detail='HTTP '+response.status;
-   try{const body=await response.json();detail=body.detail||body.error||detail;}catch(_){}
+  if(renderResult.status<200||renderResult.status>=300){
+   let detail='HTTP '+renderResult.status;
+   try{const body=JSON.parse(await renderResult.blob.text());detail=body.detail||body.error||detail;}catch(_){}
    throw Error(detail);
   }
-  const blob=await response.blob();
+  const blob=renderResult.blob;
   if(blob.size<44)throw Error('サーバーから有効なWAVが返りませんでした。');
   if(renderedAudio){renderedAudio.pause();renderedAudio.src='';renderedAudio=null;}
   if(renderedAudioUrl)URL.revokeObjectURL(renderedAudioUrl);
