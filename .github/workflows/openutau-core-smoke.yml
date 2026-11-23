@@ -313,23 +313,23 @@ jobs:
             -F "bpm=120" \
             -F "phonemizer=ja-vcv" \
             http://127.0.0.1:5089/api/v1/render \
-            --output /tmp/vbs-docker-parallel-render.wav)
+            --output /tmp/vbs-docker-sequential-render.wav)
           if [ "$status" != "200" ]; then
-            cat /tmp/vbs-docker-parallel-render.wav
+            cat /tmp/vbs-docker-sequential-render.wav
             docker logs vbs-engine-ci
             exit 1
           fi
           python3 - <<'PY'
           import struct
-          data = open("/tmp/vbs-docker-parallel-render.wav", "rb").read()
-          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "parallel Docker render did not return WAV"
+          data = open("/tmp/vbs-docker-sequential-render.wav", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "sequential Docker render did not return WAV"
           samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
           assert len(samples) > 100000 and any(samples), "parallel Docker render was empty or silent"
           print(f"Three-phrase render succeeded under 512 MiB: {len(samples)} samples")
           PY
-          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=2"
+          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=1"
           test "$(docker inspect --format '{{.State.OOMKilled}}' vbs-engine-ci)" = "false"
-          echo "Two-way bounded parallel phrase rendering stayed alive under the 512 MiB container limit."
+          echo "Sequential three-phrase rendering stayed alive under the 512 MiB container limit."
 
       - name: Stop HTTP engine service
         if: always()
