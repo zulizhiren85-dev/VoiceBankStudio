@@ -3,6 +3,31 @@
 const $=id=>document.getElementById(id);
 const state={entries:new Map(),files:new Map(),rows:[],prefixMap:new Map(),audioUrl:null,archive:null};
 const MAX_ARCHIVE=800*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
+const VOICEBANK_DB="VoiceBankStudioLocalBanks",VOICEBANK_STORE="banks";
+function openVoicebankDB(){
+ return new Promise((resolve,reject)=>{
+  if(!("indexedDB" in window)){reject(Error("このブラウザでは端末内保存を利用できません。"));return;}
+  const request=indexedDB.open(VOICEBANK_DB,1);
+  request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(VOICEBANK_STORE))db.createObjectStore(VOICEBANK_STORE);};
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error||Error("端末内保存を開けません。"));
+ });
+}
+async function saveVoicebankArchive(file){
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).put({blob:file,name:file.name,type:file.type||"application/zip",savedAt:Date.now()},"active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("音源保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("音源保存が中断されました。"));});}
+ finally{db.close();}
+}
+async function getVoicebankArchive(){
+ const db=await openVoicebankDB();
+ try{return await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readonly"),request=tx.objectStore(VOICEBANK_STORE).get("active");request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error||Error("保存音源を読み込めません。"));});}
+ finally{db.close();}
+}
+async function deleteVoicebankArchive(){
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).delete("active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("保存音源を削除できません。"));});}
+ finally{db.close();}
+}
 const norm=s=>String(s||"").replace(/\\/g,"/").replace(/^\/+/,"");
 function parseOto(text,prefix){
  const rows=[],lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
