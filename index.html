@@ -360,6 +360,9 @@ async function registerVoicebankArchive(archive,report){
  });
  registeredArchiveObject=archive;registeredArchiveId=result.archiveId;
  saveRegisteredVoicebank(archive,result.archiveId);
+ if(window.VoiceBankStudioVoicebank&&window.VoiceBankStudioVoicebank.setSavedServerArchiveId){
+  try{await window.VoiceBankStudioVoicebank.setSavedServerArchiveId(result.archiveId);}catch(_){}
+ }
  report('音源の初回登録が完了しました。次回から同じタブ内ではZIPの再送信は不要です（サーバー一時保存・最長24時間。利用中は期限を延長）。');
  return registeredArchiveId;
 }
@@ -402,7 +405,12 @@ $('voicePlay').addEventListener('click',async()=>{
   if(songNotes.some(n=>n.tone<24||n.tone>108||n.duration<30||n.duration>7680||n.position>200000))throw Error('音程・長さ・開始位置が歌唱エンジンの対応範囲外です。');
   const orderedNotes=[...songNotes].sort((a,b)=>a.position-b.position);
   for(let i=1;i<orderedNotes.length;i++){if(orderedNotes[i].position<orderedNotes[i-1].position+orderedNotes[i-1].duration)throw Error('現在は音符の重なりに未対応です。開始拍をずらして単旋律にしてください。');}
-  if((registeredArchiveObject!==archive||!registeredArchiveId)&&!restoreRegisteredVoicebank(archive))await registerVoicebankArchive(archive,report);
+  if(registeredArchiveObject!==archive||!registeredArchiveId){
+   let savedServerArchiveId=null;
+   try{savedServerArchiveId=await api.getSavedServerArchiveId();}catch(_){}
+   if(savedServerArchiveId){registeredArchiveObject=archive;registeredArchiveId=savedServerArchiveId;}
+   else if(!restoreRegisteredVoicebank(archive))await registerVoicebankArchive(archive,report);
+  }
   report(songNotes.length+' 音の譜面をOpenUtauへ送信しています（音源ZIPの再送信なし）…');
   const sendRenderRequest=(form)=>{
    return new Promise((resolve,reject)=>{
@@ -421,6 +429,7 @@ $('voicePlay').addEventListener('click',async()=>{
   let renderResult=await sendRenderRequest(createRenderForm(registeredArchiveId,songNotes,bpm));
   if(renderResult.status===404){
    try{sessionStorage.removeItem(voicebankSessionKey(archive));}catch(_){}
+   try{await api.setSavedServerArchiveId(null);}catch(_){}
    registeredArchiveId=null;registeredArchiveObject=null;
    await registerVoicebankArchive(archive,report);
    report('音源を再登録しました。譜面をレンダリングしています…');
