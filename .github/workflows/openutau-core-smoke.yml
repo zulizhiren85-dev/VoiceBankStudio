@@ -152,6 +152,10 @@ jobs:
             http://127.0.0.1:5088/api/v1/voicebanks/register \
             > /tmp/vbs-register-result.json
           archive_id=$(python3 -c 'import json; print(json.load(open("/tmp/vbs-register-result.json"))["archiveId"])')
+          python3 - "$archive_id" <<'PYID'
+          import re, sys
+          assert re.fullmatch(r"[0-9a-f]{64}", sys.argv[1]), "archive ID must be 256-bit lowercase hex"
+          PYID
           for attempt in 1 2; do
             status=$(curl --silent --show-error --write-out "%{http_code}" \
               --form-string "archiveId=$archive_id" \
@@ -167,7 +171,9 @@ jobs:
             python3 -c 'import sys; d=open(sys.argv[1],"rb").read(); assert d[:4]==b"RIFF" and len(d)>44' "/tmp/vbs-cached-render-$attempt.wav"
           done
           grep -q "Using cached extracted voicebank" /tmp/vbs-engine.log
-          echo "Registered archive rendered twice; second render reused extracted voicebank."
+          test -d "/tmp/voicebankstudio-bank-cache/$archive_id.extracted"
+          test ! -e "/tmp/voicebankstudio-bank-cache/$archive_id.zip"
+          echo "Registered archive rendered twice; ID remained valid, extracted bank was reused, and redundant ZIP storage was removed."
 
       - name: Verify two-note VCV rendering across a rest
         run: |
