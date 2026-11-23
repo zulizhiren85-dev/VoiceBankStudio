@@ -1,12 +1,6 @@
 name: OpenUtau Worldline WASM Feasibility
 
 on:
-  push:
-    branches:
-      - feature/openutau-safari-rebuild
-    paths:
-      - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
-      - "docs/IPAD_OPENUTAU_PORT.md"
   pull_request:
     paths:
       - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
@@ -79,15 +73,16 @@ jobs:
         working-directory: ${{ runner.temp }}/OpenUtau/cpp
         run: |
           set -euo pipefail
+          git clone --filter=blob:none https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/OpenUtau/emsdk"
+          git -C "$RUNNER_TEMP/OpenUtau/emsdk" checkout "24fc909c0da13ef641d5ae75e89b5a97f25e37aa"
+          sed -i '1i module(name = "emsdk", version = "4.0.6")' "$RUNNER_TEMP/OpenUtau/emsdk/bazel/MODULE.bazel"
           cat >> MODULE.bazel <<'EOF'
 
           # Isolated browser-port experiment; the upstream revision remains pinned.
           bazel_dep(name = "emsdk", version = "4.0.6")
-          git_override(
+          local_path_override(
               module_name = "emsdk",
-              remote = "https://github.com/emscripten-core/emsdk.git",
-              strip_prefix = "bazel",
-              commit = "24fc909c0da13ef641d5ae75e89b5a97f25e37aa",
+              path = "../emsdk/bazel",
           )
           EOF
           cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
