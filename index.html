@@ -248,10 +248,10 @@ $('engineStatusCheck').addEventListener('click',async()=>{
   const available=Array.isArray(engine.phonemizers&&engine.phonemizers.available)?engine.phonemizers.available:[];
   const missing=Array.isArray(engine.phonemizers&&engine.phonemizers.missing)?engine.phonemizers.missing:[];
   if(!engine.enginePrerequisitesReady)throw Error('OpenUtauの起動条件が不足しています。未検出: '+(missing.join(', ')||'詳細不明'));
-  status.textContent='接続成功：歌唱サーバー稼働中\\nOpenUtau Core: '+(engine.openUtauRevision||'revision不明')+'\\n利用可能な発音エンジン: '+available.join(' / ')+'\\n実音源の歌声品質とiPad再生は、実際の音源で別途確認が必要です。';
+  status.textContent='接続成功：歌唱サーバー稼働中\nOpenUtau Core: '+(engine.openUtauRevision||'revision不明')+'\n利用可能な発音エンジン: '+available.join(' / ')+'\n実音源の歌声品質とiPad再生は、実際の音源で別途確認が必要です。';
  }catch(error){
   status.classList.add('warn');
-  status.textContent='歌唱サーバー確認エラー：'+(error&&error.message?error.message:String(error))+'\\n音源ZIPを送る前に、サーバーの起動状態・通信・CORS設定を確認してください。';
+  status.textContent='歌唱サーバー確認エラー：'+(error&&error.message?error.message:String(error))+'\n音源ZIPを送る前に、サーバーの起動状態・通信・CORS設定を確認してください。';
  }finally{btn.disabled=false;}
 });
 
