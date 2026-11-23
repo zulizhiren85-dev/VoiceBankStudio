@@ -122,8 +122,47 @@ test("local analysis mixes stereo channels and reports denser pitch samples", as
   await expect(page.locator("#analysis")).toContainText("解析ベータ完了", { timeout: 15000 });
   await expect(page.locator("#analysis")).toContainText("A3");
   await expect(page.locator("#analysis")).toContainText("入力チャンネル：2ch");
-  await expect(page.locator("#analysis")).toContainText("解析間隔は最大約0.1秒");
+  await expect(page.locator("#analysis")).toContainText("音程サンプル最大600点");
   await expect(page.locator("#analysisToSong")).toBeEnabled();
+});
+
+test("local tempo analysis estimates a synthetic 120 BPM click track", async ({ page }) => {
+  const sampleRate = 16000;
+  const sampleCount = sampleRate * 8;
+  const wav = Buffer.alloc(44 + sampleCount * 2);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(sampleCount * 2, 40);
+  const interval = sampleRate / 2;
+  const clickLength = Math.floor(sampleRate * 0.015);
+  for (let i = 0; i < sampleCount; i++) {
+    const phase = i % interval;
+    const sample = phase < clickLength
+      ? Math.round(0.65 * 32767 * Math.sin(2 * Math.PI * 900 * phase / sampleRate))
+      : 0;
+    wav.writeInt16LE(sample, 44 + i * 2);
+  }
+
+  await page.locator("#audioFile").setInputFiles({
+    name: "120-bpm-click.wav",
+    mimeType: "audio/wav",
+    buffer: wav,
+  });
+  await page.locator("#loadAudio").click();
+  await expect(page.locator("#fileInfo")).toContainText("段階4/4 成功", { timeout: 15000 });
+  await page.locator("#analyze").click();
+  await expect(page.locator("#analysis")).toContainText("解析ベータ完了", { timeout: 15000 });
+  await expect(page.locator("#analysis")).toContainText("120 BPM");
 });
 
 test("voicebank ZIP loads oto.ini aliases and exposes valid WAV preview", async ({ page }) => {
