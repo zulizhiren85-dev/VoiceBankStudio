@@ -22,6 +22,9 @@
 <section class="panel"><h2>① メロディ・歌唱</h2>
 <div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
+<div class="toolbar" style="margin-top:8px"><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
+<div id="worldlineWasmStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">iPad内でF0解析とWORLD合成を行う基礎テストです。音源ZIPの読み込みは不要です。</div>
+<p class="small">これは合成エンジンの端末内動作確認です。UTAU音源の発音・音符処理を含む完全なローカル歌唱は、次の移植段階で接続します。</p>
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
@@ -374,4 +377,21 @@ $('voicePlay').addEventListener('click',async()=>{
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>
+$('worldlineWasmTest').addEventListener('click',async()=>{
+ const btn=$('worldlineWasmTest'),status=$('worldlineWasmStatus');
+ btn.disabled=true;
+ status.textContent='iPad内でWorldline WASMを起動し、F0解析とWORLD合成を実行しています…';
+ try{
+  if(typeof window.WorldlineModule!=='function')throw Error('WASMモジュールを読み込めません。ページの読み込み完了後に再試行してください。');
+  const output=[];
+  const instance=await window.WorldlineModule({
+   print:line=>{output.push(String(line));},
+   printErr:line=>{output.push('エラー: '+String(line));}
+  });
+  const result=output.find(line=>line.includes('WORLDLINE_WASM_SMOKE_OK'));
+  if(!instance||!result)throw Error(output.join(' / ')||'Worldlineのテスト結果が返りませんでした。');
+  status.textContent='成功：端末内でF0解析・WORLD合成が完了しました。'+result.replace('WORLDLINE_WASM_SMOKE_OK','').trim();
+ }catch(err){status.textContent='WASMテスト失敗：'+(err&&err.message?err.message:String(err));}
+ finally{btn.disabled=false;}
+});
+</script><script src="assets/worldline/worldline_wasm_smoke_binary.js" defer></script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>
