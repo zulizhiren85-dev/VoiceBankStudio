@@ -30,7 +30,7 @@
     const length = Math.max(1, Math.ceil(audioBuffer.duration * TARGET_RATE));
     const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, i) => audioBuffer.getChannelData(i));
     const sampleAt = position => {
-      const index = Math.min(sourceRate === TARGET_RATE ? length - 1 : channels[0].length - 1, Math.floor(position));
+      const index = Math.min(channels[0].length - 1, Math.floor(position));
       const next = Math.min(channels[0].length - 1, index + 1);
       const fraction = position - index;
       let sum = 0;
