@@ -20,7 +20,8 @@
 
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div id="engineStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">歌唱サーバーの状態は未確認です。音源ZIPを送る前に接続状態を確認できます。</div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <div class="toolbar" style="margin-top:8px"><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
 <div id="worldlineWasmStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">iPad内でF0解析とWORLD合成を行う基礎テストです。音源ZIPの読み込みは不要です。</div>
@@ -228,6 +229,32 @@ function importAnalysisToSong(){
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
 const OPENUTAU_ENGINE_API = "https://voicebankstudio-openutau-engine-539e.onrender.com";
+
+$('engineStatusCheck').addEventListener('click',async()=>{
+ const btn=$('engineStatusCheck'),status=$('engineStatus');
+ btn.disabled=true;status.classList.remove('warn');
+ status.textContent='歌唱サーバーへ接続しています…';
+ const request=(path)=>new Promise((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();xhr.open('GET',OPENUTAU_ENGINE_API+path);xhr.responseType='json';xhr.timeout=20000;
+  xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)resolve(xhr.response||{});else reject(new Error('HTTP '+xhr.status));};
+  xhr.onerror=()=>reject(new Error('通信またはCORSエラー'));
+  xhr.ontimeout=()=>reject(new Error('20秒でタイムアウトしました'));
+  xhr.send();
+ });
+ try{
+  const health=await request('/health');
+  if(health.status!=='ok')throw Error('ヘルスチェック応答が不正です');
+  const engine=await request('/api/v1/engine/status');
+  const available=Array.isArray(engine.phonemizers&&engine.phonemizers.available)?engine.phonemizers.available:[];
+  const missing=Array.isArray(engine.phonemizers&&engine.phonemizers.missing)?engine.phonemizers.missing:[];
+  if(!engine.enginePrerequisitesReady)throw Error('OpenUtauの起動条件が不足しています。未検出: '+(missing.join(', ')||'詳細不明'));
+  status.textContent='接続成功：歌唱サーバー稼働中\\nOpenUtau Core: '+(engine.openUtauRevision||'revision不明')+'\\n利用可能な発音エンジン: '+available.join(' / ')+'\\n実音源の歌声品質とiPad再生は、実際の音源で別途確認が必要です。';
+ }catch(error){
+  status.classList.add('warn');
+  status.textContent='歌唱サーバー確認エラー：'+(error&&error.message?error.message:String(error))+'\\n音源ZIPを送る前に、サーバーの起動状態・通信・CORS設定を確認してください。';
+ }finally{btn.disabled=false;}
+});
+
 let inspectedArchive=null,registeredArchiveObject=null,registeredArchiveId=null;
 function detectLocalPhonemizer(aliases){
  const normalized=aliases.map(a=>String(a||'').normalize('NFC').trim());
