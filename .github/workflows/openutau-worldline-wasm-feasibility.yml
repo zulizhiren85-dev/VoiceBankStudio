@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   OPENUTAU_COMMIT: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e"
@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout VoiceBankStudio
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Fetch exact upstream OpenUtau revision
         run: |
@@ -132,6 +134,23 @@ jobs:
           grep -q "WORLDLINE_WASM_NODE_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
           find "$WASM_DIR" -maxdepth 1 -type f \\( -name '*.wasm' -o -name '*.js' \\) \\
             -exec cp {} "$RUNNER_TEMP/worldline-probe/" \\;
+
+      - name: Publish validated Worldline WASM bundle to the feature branch
+        if: success()
+        run: |
+          set -euo pipefail
+          mkdir -p assets/worldline
+          cp "$RUNNER_TEMP/worldline-probe/worldline_wasm_smoke_binary.js" assets/worldline/
+          cp "$RUNNER_TEMP/worldline-probe/worldline_wasm_smoke_binary.wasm" assets/worldline/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/worldline/worldline_wasm_smoke_binary.js assets/worldline/worldline_wasm_smoke_binary.wasm
+          if git diff --cached --quiet; then
+            echo "Worldline WASM bundle is already up to date."
+            exit 0
+          fi
+          git commit -m "build: publish validated Worldline WASM browser bundle"
+          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
 
       - name: Upload feasibility evidence
         if: always()
