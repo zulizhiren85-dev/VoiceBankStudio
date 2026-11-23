@@ -165,6 +165,49 @@ test("local tempo analysis estimates a synthetic 120 BPM click track", async ({ 
   await expect(page.locator("#analysis")).toContainText("120 BPM");
 });
 
+test("voicebank creator imports audio and exports a valid oto.ini entry", async ({ page }) => {
+  const sampleRate = 44100;
+  const sampleCount = sampleRate;
+  const wav = Buffer.alloc(44 + sampleCount * 2);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(sampleCount * 2, 40);
+  for (let i = 0; i < sampleCount; i++) {
+    wav.writeInt16LE(Math.round(0.25 * 32767 * Math.sin(2 * Math.PI * 220 * i / sampleRate)), 44 + i * 2);
+  }
+
+  await page.locator("#vbCreateAlias").fill("あ");
+  await page.locator("#vbCreateFilename").fill("test-a.wav");
+  await page.locator("#vbCreateImport").setInputFiles({
+    name: "recorded-source.wav",
+    mimeType: "audio/wav",
+    buffer: wav,
+  });
+  await expect(page.locator("#vbCreateAdd")).toBeEnabled({ timeout: 15000 });
+  await page.locator("#vbCreateAdd").click();
+  await expect(page.locator("#vbCreateList")).toContainText("test-a.wav");
+  await expect(page.locator("#vbCreateList")).toContainText("あ");
+  await expect(page.locator("#vbCreateDownloadOto")).toBeEnabled();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#vbCreateDownloadOto").click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  let output = "";
+  for await (const chunk of stream) output += chunk.toString("utf8");
+  expect(output).toContain("test-a.wav=あ,0.0,100.0,-100.0,80.0,30.0");
+});
+
 test("voicebank ZIP loads oto.ini aliases and exposes valid WAV preview", async ({ page }) => {
   const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
   await page.locator("#vbZip").setInputFiles(zipPath);
