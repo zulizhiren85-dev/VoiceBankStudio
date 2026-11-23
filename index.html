@@ -20,7 +20,7 @@
 
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="engineStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">歌唱サーバーの状態は未確認です。音源ZIPを送る前に接続状態を確認できます。</div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 <div class="toolbar" style="margin-top:8px"><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
@@ -284,6 +284,8 @@ $('inspectVoicebank').addEventListener('click',async()=>{
  finally{btn.disabled=false;}
 });
 ['bpm','phonemizer'].forEach(id=>$(id).addEventListener('change',invalidateRenderedAudio));
+const confirmVoicePlay=$('confirmVoicePlay'),voicePlayButton=$('voicePlay');
+confirmVoicePlay.addEventListener('change',()=>{voicePlayButton.disabled=!confirmVoicePlay.checked;});
 $('playRender').onclick=async()=>{
  if(!renderedAudio)return;
  try{
@@ -400,7 +402,7 @@ $('voicePlay').addEventListener('click',async()=>{
   renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
   report('歌声の生成が完了しました。iPadのSafariでは自動再生が制限されるため、「生成した歌声を再生」を押してください。');
  }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
- finally{btn.disabled=false;}
+ finally{confirmVoicePlay.checked=false;btn.disabled=true;}
 });
 $('worldlineWasmTest').addEventListener('click',async()=>{
  const btn=$('worldlineWasmTest'),status=$('worldlineWasmStatus');
