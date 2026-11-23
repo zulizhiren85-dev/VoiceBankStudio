@@ -103,6 +103,24 @@ test("voicebank ZIP loads oto.ini aliases and exposes valid WAV preview", async 
   const restored = await page.evaluate(() => window.VoiceBankStudioVoicebank.getStatus());
   expect(restored.otoEntries).toBe(2);
   expect(restored.zipLoaded).toBe(true);
+
+  await page.locator("#vbClear").click();
+  await expect(page.locator("#vbStatus")).toContainText("端末内保存データを削除しました");
+  const savedRecord = await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open("VoiceBankStudioLocalBanks", 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("banks", "readonly");
+      const get = tx.objectStore("banks").get("active");
+      get.onsuccess = () => { resolve(get.result || null); db.close(); };
+      get.onerror = () => { reject(get.error); db.close(); };
+    };
+  }));
+  expect(savedRecord).toBeNull();
+  const cleared = await page.evaluate(() => window.VoiceBankStudioVoicebank.getStatus());
+  expect(cleared.zipLoaded).toBe(false);
+  expect(cleared.otoEntries).toBe(0);
 });
 
 test("video URL registration validates service and enables preview", async ({ page }) => {
