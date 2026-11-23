@@ -400,7 +400,7 @@ function finishVoiceRenderCancellation(reason){
  $('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';
  return true;
 }
-$('cancelVoiceRender').addEventListener('click',()=>finishVoiceRenderCancellation('歌唱処理を強制終了しました。通信を中断しました。サーバー側で既に開始した処理は完了まで続く場合があります。'));
+$('cancelVoiceRender').addEventListener('click',()=>finishVoiceRenderCancellation('歌唱処理を強制終了しました。通信を切断し、サーバー側にもキャンセルを通知しました。エンジンが中断を反映するまで少し時間がかかる場合があります。'));
 window.addEventListener('pagehide',()=>{
  if(activeVoiceRenderXhr){voiceRenderCancelled=true;voiceRenderGeneration++;const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;try{xhr.abort();}catch(_){}}
 });
