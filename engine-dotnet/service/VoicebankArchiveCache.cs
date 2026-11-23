@@ -6,14 +6,14 @@ namespace VoiceBankStudio.Engine;
 public static class VoicebankArchiveCache
 {
     private static readonly object Sync = new();
-    // Render's free instance has ephemeral storage. Keep the test bank available
-    // across ordinary page reloads, while bounding retention to one archive.
+    // Render free instances have ephemeral storage. Keep one active bank to stay
+    // within the disk budget; the opaque random ID is a bearer token, not an IP key.
     private static readonly TimeSpan Lifetime = TimeSpan.FromHours(24);
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "voicebankstudio-bank-cache");
     private static string? currentId;
-    private static string? currentPath;
-    private static DateTimeOffset expiresAt;
+    private static string? currentArchivePath;
     private static string? currentExtractedPath;
+    private static DateTimeOffset expiresAt;
 
     public static async Task<IResult> RegisterAsync(
         IFormFile? archive,
@@ -27,40 +27,39 @@ public static class VoicebankArchiveCache
         await EngineWorkGate.Gate.WaitAsync(cancellationToken);
         try
         {
-        Directory.CreateDirectory(Root);
-        var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
-        var path = Path.Combine(Root, id + ".zip");
-        try
-        {
-            await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true))
-                await archive.CopyToAsync(output, cancellationToken);
-
-            string? oldPath;
-            string? oldExtractedPath;
-            lock (Sync)
+            Directory.CreateDirectory(Root);
+            var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            var path = Path.Combine(Root, id + ".zip");
+            try
             {
-                oldPath = currentPath;
-                oldExtractedPath = currentExtractedPath;
-                currentId = id;
-                currentPath = path;
-                currentExtractedPath = null;
-                expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+                await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true))
+                    await archive.CopyToAsync(output, cancellationToken);
+
+                string? oldArchivePath;
+                string? oldExtractedPath;
+                lock (Sync)
+                {
+                    oldArchivePath = currentArchivePath;
+                    oldExtractedPath = currentExtractedPath;
+                    currentId = id;
+                    currentArchivePath = path;
+                    currentExtractedPath = null;
+                    expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+                }
+                TryDelete(oldArchivePath);
+                TryDeleteDirectory(oldExtractedPath);
+                return Results.Ok(new { archiveId = id, expiresInMinutes = (int)Lifetime.TotalMinutes });
             }
-            if (!string.Equals(oldPath, path, StringComparison.Ordinal))
-                TryDelete(oldPath);
-            TryDeleteDirectory(oldExtractedPath);
-            return Results.Ok(new { archiveId = id, expiresInMinutes = (int)Lifetime.TotalMinutes });
-        }
-        catch (OperationCanceledException)
-        {
-            TryDelete(path);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            TryDelete(path);
-            return Results.Problem(title: "音源の一時登録に失敗しました。", detail: ex.Message, statusCode: 500);
-        }
+            catch (OperationCanceledException)
+            {
+                TryDelete(path);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                TryDelete(path);
+                return Results.Problem(title: "音源の一時登録に失敗しました。", detail: ex.Message, statusCode: 500);
+            }
         }
         finally
         {
@@ -70,64 +69,55 @@ public static class VoicebankArchiveCache
 
     public static bool TryGetPath(string? id, out string path)
     {
-        string? expiredPath = null;
+        string? expiredArchivePath = null;
         string? expiredExtractedPath = null;
         lock (Sync)
         {
-            if (!string.IsNullOrWhiteSpace(id) &&
-                string.Equals(id, currentId, StringComparison.Ordinal) &&
-                currentPath is not null &&
-                File.Exists(currentPath) &&
-                DateTimeOffset.UtcNow < expiresAt)
+            if (MatchesActiveId(id) && currentArchivePath is not null &&
+                File.Exists(currentArchivePath))
             {
-                // Sliding expiration: active test sessions keep their bank cached.
-                expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
-                path = currentPath;
+                RefreshExpiry();
+                path = currentArchivePath;
                 return true;
             }
 
-            if (currentPath is not null && DateTimeOffset.UtcNow >= expiresAt)
-            {
-                expiredPath = currentPath;
-                expiredExtractedPath = currentExtractedPath;
-                currentId = null;
-                currentPath = null;
-                currentExtractedPath = null;
-                expiresAt = DateTimeOffset.MinValue;
-            }
+            ExpireIfNeeded(out expiredArchivePath, out expiredExtractedPath);
             path = string.Empty;
         }
-        TryDelete(expiredPath);
+        TryDelete(expiredArchivePath);
         TryDeleteDirectory(expiredExtractedPath);
         return false;
     }
 
     public static bool TryGetExtractedPath(string? id, out string path)
     {
+        string? expiredArchivePath = null;
+        string? expiredExtractedPath = null;
         lock (Sync)
         {
-            if (!string.IsNullOrWhiteSpace(id) &&
-                string.Equals(id, currentId, StringComparison.Ordinal) &&
-                currentExtractedPath is not null &&
-                Directory.Exists(currentExtractedPath) &&
-                DateTimeOffset.UtcNow < expiresAt)
+            if (MatchesActiveId(id) && currentExtractedPath is not null &&
+                Directory.Exists(currentExtractedPath))
             {
-                expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+                RefreshExpiry();
                 path = currentExtractedPath;
                 return true;
             }
+
+            ExpireIfNeeded(out expiredArchivePath, out expiredExtractedPath);
             path = string.Empty;
-            return false;
         }
+        TryDelete(expiredArchivePath);
+        TryDeleteDirectory(expiredExtractedPath);
+        return false;
     }
 
     public static bool TryStoreExtractedPath(string? id, string sourcePath, out string path)
     {
+        string? archiveToDelete = null;
         lock (Sync)
         {
-            if (string.IsNullOrWhiteSpace(id) ||
-                !string.Equals(id, currentId, StringComparison.Ordinal) ||
-                currentPath is null ||
+            if (!MatchesActiveId(id) || currentArchivePath is null ||
+                !File.Exists(currentArchivePath) ||
                 DateTimeOffset.UtcNow >= expiresAt ||
                 !Directory.Exists(sourcePath))
             {
@@ -141,9 +131,13 @@ public static class VoicebankArchiveCache
                 TryDeleteDirectory(destination);
                 Directory.Move(sourcePath, destination);
                 currentExtractedPath = destination;
-                expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+
+                // The extracted bank is the reusable representation. Keeping both
+                // a ~600 MB ZIP and its larger expanded copy wastes ephemeral disk.
+                archiveToDelete = currentArchivePath;
+                currentArchivePath = null;
+                RefreshExpiry();
                 path = destination;
-                return true;
             }
             catch
             {
@@ -151,6 +145,31 @@ public static class VoicebankArchiveCache
                 return false;
             }
         }
+        TryDelete(archiveToDelete);
+        return true;
+    }
+
+    private static bool MatchesActiveId(string? id) =>
+        !string.IsNullOrWhiteSpace(id) &&
+        string.Equals(id, currentId, StringComparison.Ordinal) &&
+        DateTimeOffset.UtcNow < expiresAt;
+
+    private static void RefreshExpiry() =>
+        expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+
+    private static void ExpireIfNeeded(out string? archivePath, out string? extractedPath)
+    {
+        archivePath = null;
+        extractedPath = null;
+        if (currentId is null || DateTimeOffset.UtcNow < expiresAt)
+            return;
+
+        archivePath = currentArchivePath;
+        extractedPath = currentExtractedPath;
+        currentId = null;
+        currentArchivePath = null;
+        currentExtractedPath = null;
+        expiresAt = DateTimeOffset.MinValue;
     }
 
     private static void TryDeleteDirectory(string? path)
