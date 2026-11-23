@@ -57,7 +57,7 @@
 </div>
 <div class="toolbar" style="margin-top:10px"><button id="vbCreateAdd" class="primary" type="button" disabled>原音リストに追加</button><button id="vbCreateDownloadWav" type="button" disabled>WAVを保存</button><button id="vbCreateDownloadOto" type="button" disabled>oto.iniを保存</button></div>
 <div id="vbCreateList" class="status" style="margin-top:8px" aria-live="polite">登録した原音はここに表示されます。</div>
-<p class="small">oto.iniの並びは「ファイル名=エイリアス,オフセット,固定範囲,右ブランク,先行発声,オーバーラップ」です。値はミリ秒。数値は手動調整が必要です。OpenUtauで読み込んで発音確認する工程は今後追加します。</p>
+<p class="small">oto.iniの並びは「ファイル名=エイリアス,オフセット,固定範囲,右ブランク,先行発声,オーバーラップ」です。値はミリ秒。数値は手動調整が必要です。原音リストは現在ページ内だけに一時保持されるため、再読み込み前にWAVとoto.iniを保存してください。OpenUtauで読み込んで発音確認する工程は今後追加します。</p>
 </section>
 <section class="panel"><h2>④ プロジェクト保存・読み込み</h2><div class="toolbar"><button class="primary" id="save">プロジェクトを保存</button><label class="filebtn">プロジェクトを読み込む<input id="load" type="file" accept=".json,application/json" class="hidden"></label></div><p class="small">音符・BPM・拍子をJSON形式で保存します。音声ファイル自体は含みません。</p><div id="msg" class="muted" aria-live="polite"></div></section>
 
