@@ -27,7 +27,7 @@ This is preferable to applying an independent post-render pitch shifter because 
 
 - Browser E2E verifies that D4 is sent as MIDI 62, with no octave offset.
 - The OpenUtau engine inspection endpoint reports the selected alias and source WAV for each semitone from MIDI 36 through 96.
-- CI verifies that the synthetic `prefix.map` selects the low subbank at C4 and B4 and the high subbank at C5 and C6, and that Worldline-R still produces a non-silent WAV.
+- CI verifies that the synthetic `prefix.map` selects the low subbank at C4 and the high subbank at C5. The fixture deliberately leaves B4 and C6 unmapped, so OpenUtau falls back to the plain alias at those notes. It also measures the rendered C5 output and checks that Worldline-R moves the 220 Hz source toward the C5 target (490–560 Hz).
 - Real-bank acceptance is still required on iPad Safari. In particular, test the user's 7-pitch VCV bank and listen for pitch accuracy, timbre changes at subbank boundaries, and artifacts at large transposition distances.
 
 ## Not yet claimed
