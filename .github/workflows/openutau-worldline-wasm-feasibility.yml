@@ -1,10 +1,14 @@
 name: OpenUtau Worldline WASM Feasibility
 
 on:
-  pull_request:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
     paths:
       - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
       - "docs/IPAD_OPENUTAU_PORT.md"
+      - "scripts/openutau-worldline-wasm-smoke.cpp"
+      - "scripts/run-worldline-wasm-smoke.cjs"
   workflow_dispatch:
 
 permissions:
