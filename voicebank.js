@@ -117,9 +117,9 @@ async function loadFiles(files,mode,options={}){
  const missing=state.rows.filter(r=>!state.files.has(r.file)&&!state.entries.has(r.file)).length;render();
  $("vbStatus").textContent="読み込み完了！ oto.ini "+state.rows.length+"件 / WAV "+(state.files.size+[...state.entries.keys()].filter(x=>x.toLowerCase().endsWith(".wav")).length)+"件 / WAV欠損参照 "+missing+"件。音源データは端末内で処理され、サーバーには送信されません。";
  if(mode==="zip"&&options.persist!==false){
-  $("vbStatus").textContent+="\\n端末内ストレージへ音源ZIPを保存しています…";
-  try{await saveVoicebankArchive(list[0]);$("vbStatus").textContent+="\\n端末内保存完了。次回起動時に自動復元します。";}
-  catch(error){$("vbStatus").textContent+="\\n端末内保存は未完了（"+error.message+"）。この画面を閉じると再読み込みが必要です。";}
+  $("vbStatus").textContent+="\n端末内ストレージへ音源ZIPを保存しています…";
+  try{await saveVoicebankArchive(list[0]);$("vbStatus").textContent+="\n端末内保存完了。次回起動時に自動復元します。";}
+  catch(error){$("vbStatus").textContent+="\n端末内保存は未完了（"+error.message+"）。この画面を閉じると再読み込みが必要です。";}
  }
 }
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
@@ -254,7 +254,7 @@ window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:
   $("vbStatus").textContent="端末内に保存されたUTAU音源を復元しています…";
   const file=new File([saved.blob],saved.name||"saved-voicebank.zip",{type:saved.type||"application/zip"});
   await loadFiles([file],"zip",{persist:false});
-  $("vbStatus").textContent+="\\n保存済み音源を復元しました。再アップロードは不要です。";
+  $("vbStatus").textContent+="\n保存済み音源を復元しました。再アップロードは不要です。";
  }catch(error){$("vbStatus").textContent="保存済み音源の自動復元に失敗しました: "+error.message+"。必要ならZIPを再選択してください。";}
 })();
 
