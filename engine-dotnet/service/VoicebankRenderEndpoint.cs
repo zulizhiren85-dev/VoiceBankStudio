@@ -146,8 +146,10 @@ public static class VoicebankRenderEndpoint
             logger.LogInformation("Calling headless OpenUtau renderer. Notes={NoteCount}, Phonemizer={Phonemizer}", noteList.Count, selectedPhonemizer);
             var samples = await host.RenderAsync(singer, noteList, selectedPhonemizer, bpm, cancellationToken);
             logger.LogInformation("Headless OpenUtau renderer returned. Samples={SampleCount}", samples.Length);
-            var wav = ToMono16Wav(samples, 44100);
-            return Results.File(wav, "audio/wav", "VoiceBankStudio-render.wav");
+            return Results.Stream(
+                (stream, responseCancellation) => WriteMono16WavAsync(stream, samples, 44100, responseCancellation),
+                "audio/wav",
+                "VoiceBankStudio-render.wav");
         }
         catch (InvalidDataException ex)
         {
@@ -180,30 +182,44 @@ public static class VoicebankRenderEndpoint
         }
     }
 
-    private static byte[] ToMono16Wav(float[] samples, int sampleRate)
+    private static async Task WriteMono16WavAsync(
+        Stream stream,
+        float[] samples,
+        int sampleRate,
+        CancellationToken cancellationToken)
     {
-        using var stream = new MemoryStream();
-        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
         int dataBytes = checked(samples.Length * sizeof(short));
-        writer.Write(Encoding.ASCII.GetBytes("RIFF"));
-        writer.Write(36 + dataBytes);
-        writer.Write(Encoding.ASCII.GetBytes("WAVE"));
-        writer.Write(Encoding.ASCII.GetBytes("fmt "));
-        writer.Write(16);
-        writer.Write((short)1);
-        writer.Write((short)1);
-        writer.Write(sampleRate);
-        writer.Write(sampleRate * sizeof(short));
-        writer.Write((short)sizeof(short));
-        writer.Write((short)16);
-        writer.Write(Encoding.ASCII.GetBytes("data"));
-        writer.Write(dataBytes);
-        foreach (var sample in samples)
+        byte[] header = new byte[44];
+        Encoding.ASCII.GetBytes("RIFF").CopyTo(header, 0);
+        BitConverter.GetBytes(checked(36 + dataBytes)).CopyTo(header, 4);
+        Encoding.ASCII.GetBytes("WAVE").CopyTo(header, 8);
+        Encoding.ASCII.GetBytes("fmt ").CopyTo(header, 12);
+        BitConverter.GetBytes(16).CopyTo(header, 16);
+        BitConverter.GetBytes((short)1).CopyTo(header, 20);
+        BitConverter.GetBytes((short)1).CopyTo(header, 22);
+        BitConverter.GetBytes(sampleRate).CopyTo(header, 24);
+        BitConverter.GetBytes(sampleRate * sizeof(short)).CopyTo(header, 28);
+        BitConverter.GetBytes((short)sizeof(short)).CopyTo(header, 32);
+        BitConverter.GetBytes((short)16).CopyTo(header, 34);
+        Encoding.ASCII.GetBytes("data").CopyTo(header, 36);
+        BitConverter.GetBytes(dataBytes).CopyTo(header, 40);
+        await stream.WriteAsync(header, cancellationToken);
+
+        // Convert and send small PCM blocks instead of allocating a second
+        // full-size WAV byte array alongside the rendered float samples.
+        byte[] buffer = new byte[64 * 1024];
+        int samplesPerBlock = buffer.Length / sizeof(short);
+        for (int offset = 0; offset < samples.Length; offset += samplesPerBlock)
         {
-            var value = (short)Math.Round(Math.Clamp(sample, -1f, 1f) * 32767f);
-            writer.Write(value);
+            cancellationToken.ThrowIfCancellationRequested();
+            int count = Math.Min(samplesPerBlock, samples.Length - offset);
+            for (int i = 0; i < count; i++)
+            {
+                short value = (short)Math.Round(Math.Clamp(samples[offset + i], -1f, 1f) * 32767f);
+                buffer[i * 2] = (byte)value;
+                buffer[i * 2 + 1] = (byte)(value >> 8);
+            }
+            await stream.WriteAsync(buffer.AsMemory(0, count * sizeof(short)), cancellationToken);
         }
-        writer.Flush();
-        return stream.ToArray();
     }
 }
