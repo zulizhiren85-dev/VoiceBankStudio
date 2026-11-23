@@ -176,10 +176,12 @@ public sealed class HeadlessOpenUtauHost : IDisposable
 
             var phraseTasks = phrases.Select(async (phrase, index) =>
             {
-                await renderSlots.WaitAsync(cancellationToken);
+                var slotAcquired = false;
                 try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    await renderSlots.WaitAsync(renderCancellation.Token);
+                    slotAcquired = true;
+                    renderCancellation.Token.ThrowIfCancellationRequested();
                     // Each phrase gets its own renderer instance; OpenUtau's cache
                     // locks protect shared phrase WAVs and each phrase owns its synth.
                     var renderer = new WorldlineRenderer(version: 10);
@@ -208,9 +210,17 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                         return (Start: 0, Samples: Array.Empty<float>());
                     return (Start: destinationStart, Samples: phraseSamples.Skip(sourceOffset).ToArray());
                 }
+                catch
+                {
+                    // Stop sibling phrases immediately when one phrase fails. This
+                    // avoids wasting CPU on audio that can no longer be returned.
+                    renderCancellation.Cancel();
+                    throw;
+                }
                 finally
                 {
-                    renderSlots.Release();
+                    if (slotAcquired)
+                        renderSlots.Release();
                 }
             }).ToArray();
 

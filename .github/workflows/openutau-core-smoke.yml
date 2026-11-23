@@ -198,6 +198,8 @@ jobs:
           assert any(sample != 0 for sample in samples), "rendered WAV is silent"
           print(f"Multi-phrase VCV render preserved song timeline: {len(samples)} samples")
           PY
+          grep -q "PhraseCount=2, Parallelism=2" /tmp/vbs-engine.log
+          echo "Two independent short phrases were scheduled with bounded parallelism=2."
 
       - name: Verify two-note CVVC rendering
         run: |
