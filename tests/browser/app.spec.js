@@ -6,6 +6,30 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
+
+test("OpenUtau server readiness check reports available phonemizers", async ({ page }) => {
+  await page.route("**/health", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok" }),
+  }));
+  await page.route("**/api/v1/engine/status", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      openUtauRevision: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e",
+      enginePrerequisitesReady: true,
+      phonemizers: {
+        available: ["JapaneseVCVPhonemizer", "JapaneseCVVCPhonemizer"],
+        missing: [],
+      },
+      realVoicebankVerified: false,
+    }),
+  }));
+  await page.locator("#engineStatusCheck").click();
+  await expect(page.locator("#engineStatus")).toContainText("接続成功：歌唱サーバー稼働中");
+  await expect(page.locator("#engineStatus")).toContainText("JapaneseVCVPhonemizer");
+  await expect(page.locator("#engineStatus")).toContainText("実音源の歌声品質");
+});
+
 test("main interface loads without uncaught page errors", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
