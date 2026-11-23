@@ -139,11 +139,18 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   await page.locator("#vbZip").setInputFiles(zipPath);
   await expect(page.locator("#vbStatus")).toContainText("読み込み完了", { timeout: 15000 });
 
+  await expect(page.locator("#voicePlay")).toBeDisabled();
+  await page.locator("#confirmVoicePlay").check();
+  await expect(page.locator("#voicePlay")).toBeEnabled();
+  await page.locator("#confirmVoicePlay").uncheck();
+  await expect(page.locator("#voicePlay")).toBeDisabled();
+
   await page.locator("details.song-editor summary").click();
   const firstPitch = page.locator("#notes .note").first().locator('input[aria-label="pitch"]');
   await firstPitch.fill("D4");
   await firstPitch.dispatchEvent("change");
 
+  await page.locator("#confirmVoicePlay").check();
   await page.locator("#voicePlay").click();
   await expect(page.locator("#voicePlayStatus")).toContainText("歌声の生成が完了しました", {
     timeout: 15000,
