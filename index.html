@@ -20,12 +20,10 @@
 
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
-<div id="engineStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">歌唱サーバーの状態は未確認です。音源ZIPを送る前に接続状態を確認できます。</div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（OpenUtau）</button><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
-<div class="toolbar" style="margin-top:8px"><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
-<div id="worldlineWasmStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">iPad内でF0解析とWORLD合成を行う基礎テストです。音源ZIPの読み込みは不要です。</div>
-<p class="small">これは合成エンジンの端末内動作確認です。UTAU音源の発音・音符処理を含む完全なローカル歌唱は、次の移植段階で接続します。</p>
+
+
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
@@ -51,6 +49,13 @@
 <div class="toolbar"><label class="filebtn">ZIP音源を読み込む<input id="vbZip" type="file" accept=".zip,application/zip" class="hidden"></label><label class="filebtn">音源フォルダを読み込む<input id="vbFolder" type="file" webkitdirectory directory multiple class="hidden"></label><button id="vbClear" type="button">読み込み解除</button></div>
 <div id="vbSummary" class="muted" style="margin-top:10px">音源はまだ読み込まれていません。</div><div id="vbStatus" class="status" style="margin-top:8px">ZIPまたはフォルダを選択してください。</div><audio id="vbAudio" controls class="hidden" style="width:100%;margin-top:8px"></audio><div id="vbRows" class="vb-list"></div>
 <p class="small">歌唱エンジンはOpenUtau Coreの日本語VCV/CV/CVVC phonemizerとWorldline-Rを使用します。oto.ini・prefix.map・多音階サブバンクはOpenUtau側で読み込みます。現在は単旋律ベータ版で、重ねた音符、ピッチベンド、ビブラート、特殊なresampler設定は未対応です。OpenUtau歌唱にはZIP読み込みが必要です。初回登録後は音源を一時保存して再利用します。フォルダ読み込みは端末内の原音試聴用です。</p></section>
+<section class="panel" id="diagnostics"><details><summary style="cursor:pointer;color:var(--accent);font-size:15px;padding:4px 0">接続テスト・開発者向け診断を開く</summary>
+<p class="muted">普段の曲作りでは使用しません。接続不良や歌唱エンジンの確認が必要なときだけ開いてください。</p>
+<div class="toolbar"><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
+<div id="engineStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">歌唱サーバーの状態は未確認です。音源ZIPを送る前に接続状態を確認できます。</div>
+<div id="worldlineWasmStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">iPad内でF0解析とWORLD合成を行う基礎テストです。音源ZIPの読み込みは不要です。</div>
+<p class="small">Worldline WASMテストは合成エンジンの端末内動作確認です。UTAU音源の発音・音符処理を含む完全なローカル歌唱とは別のテストです。</p>
+</details></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
