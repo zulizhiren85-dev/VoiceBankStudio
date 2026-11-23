@@ -316,11 +316,12 @@ $('inspectVoicebank').addEventListener('click',async()=>{
 const confirmVoicePlay=$('confirmVoicePlay'),voicePlayButton=$('voicePlay');
 function setButtonReady(button,ready){button.classList.toggle('ready',ready);button.disabled=!ready;}
 function updateRenderButtons(){
- const canPlay=!!renderedAudio,canSave=!!renderedAudioUrl;
- setButtonReady($('playRender'),canPlay);
- setButtonReady($('downloadRender'),canSave);
- $('playRender').textContent=canPlay?'▶ 生成した歌声を再生（押せます）':'▶ 生成した歌声を再生（歌唱後に有効）';
- $('downloadRender').textContent=canSave?'WAVを保存（押せます）':'WAVを保存（歌唱後に有効）';
+ // 再生・保存は同じ生成済みWAVを使うため、同じ条件で有効化する。
+ const hasRenderedWav=!!renderedAudioUrl;
+ setButtonReady($('playRender'),hasRenderedWav);
+ setButtonReady($('downloadRender'),hasRenderedWav);
+ $('playRender').textContent=hasRenderedWav?'▶ 生成した歌声を再生（押せます）':'▶ 生成した歌声を再生（歌唱後に有効）';
+ $('downloadRender').textContent=hasRenderedWav?'WAVを保存（押せます）':'WAVを保存（歌唱後に有効）';
 }
 confirmVoicePlay.addEventListener('change',()=>{
  const ready=confirmVoicePlay.checked;
@@ -329,8 +330,18 @@ confirmVoicePlay.addEventListener('change',()=>{
  $('voicePlayReadyHint').textContent=ready?'準備完了：歌唱ボタンが押せます。押すとOpenUtauで歌唱を開始します。':'歌唱ボタンは確認チェック後に有効になります。';
 });
 $('playRender').onclick=async()=>{
- if(!renderedAudio)return;
+ if(!renderedAudioUrl)return;
  try{
+  // iOS Safari対策：再生ボタンを押したユーザー操作の中でAudioを生成・再生する。
+  if(!renderedAudio||renderedAudio.src!==renderedAudioUrl){
+   if(renderedAudio){renderedAudio.pause();renderedAudio.src='';}
+   renderedAudio=new Audio();
+   renderedAudio.preload='auto';
+   renderedAudio.src=renderedAudioUrl;
+   renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
+   renderedAudio.onended=()=>{const message='歌声の再生が完了しました。';$('voicePlayStatus').textContent=message;$('msg').textContent=message;};
+   renderedAudio.onerror=()=>{const message='WAVを読み込めませんでした。ファイル形式または音声データを確認してください。';$('voicePlayStatus').textContent=message;$('msg').textContent=message;};
+  }
   await renderedAudio.play();
   const message='生成した歌声を再生中です…';
   $('voicePlayStatus').textContent=message;
