@@ -14,9 +14,21 @@ function openVoicebankDB(){
  });
 }
 async function saveVoicebankArchive(file){
+ if(navigator.storage&&navigator.storage.persist){
+  try{await navigator.storage.persist();}catch(_){}
+ }
  const db=await openVoicebankDB();
- try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).put({blob:file,name:file.name,type:file.type||"application/zip",savedAt:Date.now()},"active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("音源保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("音源保存が中断されました。"));});}
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).put({blob:file,name:file.name,type:file.type||"application/zip",lastModified:file.lastModified||0,serverArchiveId:null,savedAt:Date.now()},"active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("音源保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("音源保存が中断されました。容量不足の可能性があります。"));});}
  finally{db.close();}
+}
+async function updateSavedServerArchiveId(archiveId){
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite"),store=tx.objectStore(VOICEBANK_STORE),request=store.get("active");request.onsuccess=()=>{const record=request.result;if(record){record.serverArchiveId=archiveId||null;store.put(record,"active");}};request.onerror=()=>reject(request.error||Error("保存音源情報を読み込めません。"));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("登録情報の保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("登録情報の保存が中断されました。"));});}
+ finally{db.close();}
+}
+async function getSavedServerArchiveId(){
+ const record=await getVoicebankArchive();
+ return record&&typeof record.serverArchiveId==="string"?record.serverArchiveId:null;
 }
 async function getVoicebankArchive(){
  const db=await openVoicebankDB();
@@ -246,13 +258,13 @@ async function playNotes(notes,options={}){
  return {scheduled:plans.length,aliases:plans.map(p=>p.row.alias)};
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
-window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,getAliases:()=>state.rows.map(row=>row.alias),playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
+window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,getAliases:()=>state.rows.map(row=>row.alias),playNotes,stop:stopSinging,setSavedServerArchiveId:updateSavedServerArchiveId,getSavedServerArchiveId,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
 (async()=>{
  try{
   const saved=await getVoicebankArchive();if(!saved||!saved.blob||!saved.blob.size)return;
   if(state.rows.length)return;
   $("vbStatus").textContent="端末内に保存されたUTAU音源を復元しています…";
-  const file=new File([saved.blob],saved.name||"saved-voicebank.zip",{type:saved.type||"application/zip"});
+  const file=new File([saved.blob],saved.name||"saved-voicebank.zip",{type:saved.type||"application/zip",lastModified:saved.lastModified||0});
   await loadFiles([file],"zip",{persist:false});
   $("vbStatus").textContent+="\n保存済み音源を復元しました。再アップロードは不要です。";
  }catch(error){$("vbStatus").textContent="保存済み音源の自動復元に失敗しました: "+error.message+"。必要ならZIPを再選択してください。";}
