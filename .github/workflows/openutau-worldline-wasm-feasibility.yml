@@ -8,6 +8,8 @@ on:
       - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
       - "docs/IPAD_OPENUTAU_PORT.md"
       - "scripts/openutau-worldline-wasm-smoke.cpp"
+      - "scripts/worldline-wasm-api.cpp"
+      - "scripts/run-worldline-wasm-api.cjs"
       - "scripts/run-worldline-wasm-smoke.cjs"
   workflow_dispatch:
 
@@ -97,6 +99,7 @@ jobs:
           register_emscripten_toolchains()
           EOF
           cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
+          cp "$GITHUB_WORKSPACE/scripts/worldline-wasm-api.cpp" worldline/worldline_wasm_api.cpp
           sed -i '1i load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")' worldline/BUILD.bazel
           cat >> worldline/BUILD.bazel <<'EOF'
 
@@ -121,6 +124,27 @@ jobs:
               name = "worldline-wasm-smoke",
               cc_target = ":worldline_wasm_smoke_binary",
           )
+
+          # Production-oriented C ABI primitive, separate from the smoke-test main.
+          cc_binary(
+              name = "worldline_wasm_api_binary",
+              srcs = ["worldline_wasm_api.cpp"],
+              deps = [":worldline_lib"],
+              linkopts = [
+                  "--no-entry",
+                  "-sALLOW_MEMORY_GROWTH=1",
+                  "-sENVIRONMENT=web,worker,node",
+                  "-sMODULARIZE=1",
+                  "-sEXPORT_NAME=WorldlineApiModule",
+                  "-sEXPORTED_FUNCTIONS=['_malloc','_free','_vbs_worldline_output_capacity','_vbs_worldline_render_pitch_shift']",
+                  "-sEXPORTED_RUNTIME_METHODS=['cwrap']",
+              ],
+          )
+
+          wasm_cc_binary(
+              name = "worldline-wasm-api",
+              cc_target = ":worldline_wasm_api_binary",
+          )
           EOF
 
       - name: Build upstream Worldline as WebAssembly
@@ -134,6 +158,11 @@ jobs:
           WASM_JS="$WASM_DIR/worldline_wasm_smoke_binary.js"
           test -f "$WASM_JS"
           node "$GITHUB_WORKSPACE/scripts/run-worldline-wasm-smoke.cjs" "$WASM_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          API_DIR="bazel-bin/worldline/worldline-wasm-api"
+          API_JS="$API_DIR/worldline_wasm_api_binary.js"
+          test -f "$API_JS"
+          node "$GITHUB_WORKSPACE/scripts/run-worldline-wasm-api.cjs" "$API_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-api-output.txt"
+          grep -q "WORLDLINE_WASM_API_OK" "$RUNNER_TEMP/worldline-probe/wasm-api-output.txt"
           grep -q "WORLDLINE_WASM_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
           grep -q "WORLDLINE_WASM_NODE_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
           cp "$WASM_JS" "$RUNNER_TEMP/worldline-probe/"
