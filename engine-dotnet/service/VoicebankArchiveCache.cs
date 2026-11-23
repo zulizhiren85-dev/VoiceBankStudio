@@ -71,6 +71,7 @@ public static class VoicebankArchiveCache
     public static bool TryGetPath(string? id, out string path)
     {
         string? expiredPath = null;
+        string? expiredExtractedPath = null;
         lock (Sync)
         {
             if (!string.IsNullOrWhiteSpace(id) &&
@@ -88,13 +89,16 @@ public static class VoicebankArchiveCache
             if (currentPath is not null && DateTimeOffset.UtcNow >= expiresAt)
             {
                 expiredPath = currentPath;
+                expiredExtractedPath = currentExtractedPath;
                 currentId = null;
                 currentPath = null;
+                currentExtractedPath = null;
                 expiresAt = DateTimeOffset.MinValue;
             }
             path = string.Empty;
         }
         TryDelete(expiredPath);
+        TryDeleteDirectory(expiredExtractedPath);
         return false;
     }
 
