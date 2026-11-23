@@ -20,7 +20,7 @@
 
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（確認後に有効）</button><span id="voicePlayReadyHint" class="small" role="status" aria-live="polite">歌唱ボタンは確認チェック後に有効になります。</span><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存（歌唱後に有効）</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（確認後に有効）</button><span id="voicePlayReadyHint" class="small" role="status" aria-live="polite">歌唱ボタンは確認チェック後に有効になります。</span><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存（歌唱後に有効）</button><button id="cancelVoiceRender" type="button" class="hidden" style="background:#762f3a;border-color:#ff7884;font-weight:700">■ 歌唱処理を強制終了</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
 
 
@@ -385,10 +385,35 @@ function restoreRegisteredVoicebank(archive){
 function saveRegisteredVoicebank(archive,archiveId){
  try{sessionStorage.setItem(voicebankSessionKey(archive),JSON.stringify({archiveId}));}catch(_){}
 }
+let activeVoiceRenderXhr=null,voiceRenderCancelled=false,voiceRenderGeneration=0;
+function finishVoiceRenderCancellation(reason){
+ if(!activeVoiceRenderXhr)return false;
+ voiceRenderCancelled=true;voiceRenderGeneration++;
+ const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;
+ try{xhr.abort();}catch(_){}
+ const status=$('voicePlayStatus');
+ status.textContent=reason||'歌唱処理を中断しました。';
+ $('msg').textContent=status.textContent;
+ $('cancelVoiceRender').classList.add('hidden');
+ confirmVoicePlay.checked=false;setButtonReady($('voicePlay'),false);
+ $('voicePlay').textContent='UTAU音源で歌う（確認後に有効）';
+ $('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';
+ return true;
+}
+$('cancelVoiceRender').addEventListener('click',()=>finishVoiceRenderCancellation('歌唱処理を強制終了しました。通信を中断しました。サーバー側で既に開始した処理は完了まで続く場合があります。'));
+window.addEventListener('pagehide',()=>{
+ if(activeVoiceRenderXhr){voiceRenderCancelled=true;voiceRenderGeneration++;const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;try{xhr.abort();}catch(_){}}
+});
+window.addEventListener('beforeunload',()=>{
+ if(activeVoiceRenderXhr){voiceRenderCancelled=true;voiceRenderGeneration++;const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;try{xhr.abort();}catch(_){}}
+});
 $('voicePlay').addEventListener('click',async()=>{
  stop();invalidateRenderedAudio();
+ const generation=++voiceRenderGeneration;
+ voiceRenderCancelled=false;
  const btn=$('voicePlay'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
  btn.disabled=true;
+ $('cancelVoiceRender').classList.remove('hidden');
  const report=message=>{status.textContent=message;$('msg').textContent=message;};
  try{
   report('OpenUtauエンジンを起動しています…');
@@ -415,13 +440,14 @@ $('voicePlay').addEventListener('click',async()=>{
   const sendRenderRequest=(form)=>{
    return new Promise((resolve,reject)=>{
     const xhr=new XMLHttpRequest();
+    activeVoiceRenderXhr=xhr;
     xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/render');
     xhr.responseType='blob';
     xhr.timeout=15*60*1000;
-    xhr.onload=()=>resolve({status:xhr.status,blob:xhr.response});
-    xhr.onerror=()=>reject(new Error('歌唱サーバーとの通信に失敗しました。CORS設定またはネットワーク接続を確認してください。'));
-    xhr.ontimeout=()=>reject(new Error('歌唱処理が15分でタイムアウトしました。サーバー側の処理時間を確認します。'));
-    xhr.onabort=()=>reject(new Error('歌唱リクエストが中断されました。'));
+    xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;resolve({status:xhr.status,blob:xhr.response});};
+    xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱サーバーとの通信に失敗しました。CORS設定またはネットワーク接続を確認してください。'));};
+    xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱処理が15分でタイムアウトしました。サーバー側の処理時間を確認します。'));};
+    xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱リクエストが中断されました。'));};
     xhr.send(form);
    });
   };
@@ -451,8 +477,16 @@ $('voicePlay').addEventListener('click',async()=>{
   renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
   renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
   report('歌声の生成が完了しました。iPadのSafariでは自動再生が制限されるため、「生成した歌声を再生」を押してください。');
- }catch(err){report('歌唱エラー：'+(err&&err.message?err.message:String(err)));}
- finally{confirmVoicePlay.checked=false;setButtonReady(btn,false);btn.textContent='UTAU音源で歌う（確認後に有効）';$('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';}
+ }catch(err){
+  if(!voiceRenderCancelled&&generation===voiceRenderGeneration)report('歌唱エラー：'+(err&&err.message?err.message:String(err)));
+ }
+ finally{
+  if(generation===voiceRenderGeneration){
+   activeVoiceRenderXhr=null;
+   $('cancelVoiceRender').classList.add('hidden');
+   confirmVoicePlay.checked=false;setButtonReady(btn,false);btn.textContent='UTAU音源で歌う（確認後に有効）';$('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';
+  }
+ }
 });
 $('worldlineWasmTest').addEventListener('click',async()=>{
  const btn=$('worldlineWasmTest'),status=$('worldlineWasmStatus');
