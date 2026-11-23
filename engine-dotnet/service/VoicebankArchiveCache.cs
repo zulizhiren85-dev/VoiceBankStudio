@@ -48,6 +48,7 @@ public static class VoicebankArchiveCache
                 }
                 TryDelete(oldArchivePath);
                 TryDeleteDirectory(oldExtractedPath);
+                CleanupOrphanedEntries(path);
                 return Results.Ok(new { archiveId = id, expiresInMinutes = (int)Lifetime.TotalMinutes });
             }
             catch (OperationCanceledException)
@@ -147,6 +148,30 @@ public static class VoicebankArchiveCache
         }
         TryDelete(archiveToDelete);
         return true;
+    }
+
+    private static void CleanupOrphanedEntries(string activeArchivePath)
+    {
+        try
+        {
+            if (!Directory.Exists(Root))
+                return;
+
+            var activePath = Path.GetFullPath(activeArchivePath);
+            foreach (var file in Directory.EnumerateFiles(Root))
+            {
+                if (!string.Equals(Path.GetFullPath(file), activePath, StringComparison.Ordinal))
+                    TryDelete(file);
+            }
+
+            // Extracted folders from a previous process have no live in-memory ID.
+            foreach (var directory in Directory.EnumerateDirectories(Root))
+                TryDeleteDirectory(directory);
+        }
+        catch
+        {
+            // Cleanup is best-effort; registration itself remains usable.
+        }
     }
 
     private static bool MatchesActiveId(string? id) =>

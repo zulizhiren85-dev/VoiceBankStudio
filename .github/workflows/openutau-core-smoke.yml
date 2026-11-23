@@ -147,10 +147,14 @@ jobs:
 
       - name: Verify registered voicebank extraction cache reuse
         run: |
+          mkdir -p /tmp/voicebankstudio-bank-cache/orphan.extracted
+          touch /tmp/voicebankstudio-bank-cache/orphan.zip
           curl --fail --silent \
             -F "archive=@/tmp/vbs-testbank.zip" \
             http://127.0.0.1:5088/api/v1/voicebanks/register \
             > /tmp/vbs-register-result.json
+          test ! -e /tmp/voicebankstudio-bank-cache/orphan.zip
+          test ! -e /tmp/voicebankstudio-bank-cache/orphan.extracted
           archive_id=$(python3 -c 'import json; print(json.load(open("/tmp/vbs-register-result.json"))["archiveId"])')
           python3 - "$archive_id" <<'PYID'
           import re, sys
