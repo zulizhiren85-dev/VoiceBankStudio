@@ -133,6 +133,19 @@ public static class VoicebankArchiveInspector
                     c4 = singer.TryGetMappedOto("あ", 60, out var c4Oto) ? c4Oto.Alias : null,
                     c5 = singer.TryGetMappedOto("あ", 72, out var c5Oto) ? c5Oto.Alias : null,
                 },
+                pitchMap = Enumerable.Range(36, 61).Select(tone =>
+                {
+                    var found = singer.TryGetMappedOto("あ", tone, out var mappedOto);
+                    var noteNames = new[] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+                    return new
+                    {
+                        tone,
+                        note = noteNames[tone % 12] + (tone / 12 - 1),
+                        found,
+                        alias = found ? mappedOto.Alias : null,
+                        file = found ? Path.GetRelativePath(singer.Location, mappedOto.File) : null,
+                    };
+                }),
                 otoCount = singer.Otos.Count,
                 phonemizerTests = new
                 {
