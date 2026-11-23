@@ -70,6 +70,12 @@ test("voicebank ZIP loads oto.ini aliases and exposes valid WAV preview", async 
   const api = await page.evaluate(() => window.VoiceBankStudioVoicebank.getStatus());
   expect(api.otoEntries).toBe(2);
   expect(api.zipLoaded).toBe(true);
+  await expect(page.locator("#vbStatus")).toContainText("端末内保存完了", { timeout: 15000 });
+  await page.reload();
+  await expect(page.locator("#vbStatus")).toContainText("保存済み音源を復元しました", { timeout: 15000 });
+  const restored = await page.evaluate(() => window.VoiceBankStudioVoicebank.getStatus());
+  expect(restored.otoEntries).toBe(2);
+  expect(restored.zipLoaded).toBe(true);
 });
 
 test("video URL registration validates service and enables preview", async ({ page }) => {
