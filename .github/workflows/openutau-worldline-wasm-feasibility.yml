@@ -1,0 +1,90 @@
+name: OpenUtau Worldline WASM Feasibility
+
+on:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
+    paths:
+      - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
+      - "docs/IPAD_OPENUTAU_PORT.md"
+  pull_request:
+    paths:
+      - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
+      - "docs/IPAD_OPENUTAU_PORT.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OPENUTAU_COMMIT: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e"
+  BAZELISK_VERSION: "1.25.0"
+
+jobs:
+  inspect-and-build-native-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout VoiceBankStudio
+        uses: actions/checkout@v4
+
+      - name: Fetch exact upstream OpenUtau revision
+        run: |
+          git clone --filter=blob:none https://github.com/openutau/OpenUtau.git "$RUNNER_TEMP/OpenUtau"
+          git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
+          test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+
+      - name: Install pinned Bazelisk
+        run: |
+          curl --fail --location --retry 3 \
+            "https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/bazelisk-linux-amd64" \
+            --output "$RUNNER_TEMP/bazelisk"
+          chmod +x "$RUNNER_TEMP/bazelisk"
+          sudo install "$RUNNER_TEMP/bazelisk" /usr/local/bin/bazel
+          bazel --version
+
+      - name: Install Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "latest"
+          actions-cache-folder: "emsdk-cache"
+
+      - name: Record compiler and upstream build metadata
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          mkdir -p "$RUNNER_TEMP/worldline-probe"
+          {
+            echo "OpenUtau commit: $OPENUTAU_COMMIT"
+            echo
+            echo "Bazel version:"
+            bazel --version
+            echo
+            echo "Emscripten compiler:"
+            emcc --version
+            echo
+            echo "Pinned Bazel version:"
+            cat .bazelversion
+            echo
+            echo "Worldline target definition:"
+            cat worldline/BUILD.bazel
+          } | tee "$RUNNER_TEMP/worldline-probe/toolchain-and-target.txt"
+
+      - name: Build upstream native Worldline reference
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          bazel build //worldline
+
+      - name: Capture Worldline dependency graph
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          bazel query 'deps(//worldline)' --output=label_kind \
+            | sort > "$RUNNER_TEMP/worldline-probe/worldline-dependencies.txt"
+          bazel cquery //worldline --output=files \
+            > "$RUNNER_TEMP/worldline-probe/native-output-files.txt"
+
+      - name: Upload feasibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openutau-worldline-feasibility
+          path: ${{ runner.temp }}/worldline-probe/
+          if-no-files-found: warn
