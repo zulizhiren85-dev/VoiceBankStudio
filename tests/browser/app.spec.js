@@ -144,12 +144,45 @@ test("singing can be force-cancelled while the voicebank upload is active", asyn
   await expect(page.locator("#voicePlay")).toBeDisabled();
 });
 
+
+test("singing render request can be force-cancelled", async ({ page }) => {
+  const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
+  let renderStartedResolve, releaseRenderResolve;
+  const renderStarted = new Promise(resolve => { renderStartedResolve = resolve; });
+  const renderHeld = new Promise(resolve => { releaseRenderResolve = resolve; });
+  await page.route("**/api/v1/voicebanks/register", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ archiveId: "render-cancel-voicebank" }),
+  }));
+  await page.route("**/api/v1/render", async route => {
+    renderStartedResolve();
+    await renderHeld;
+    try {
+      await route.fulfill({ status: 200, contentType: "audio/wav", body: Buffer.alloc(128) });
+    } catch (_) {}
+  });
+  await page.locator("#vbZip").setInputFiles(zipPath);
+  await expect(page.locator("#vbStatus")).toContainText("読み込み完了", { timeout: 15000 });
+  await page.locator("#confirmVoicePlay").check();
+  await page.locator("#voicePlay").click();
+  await renderStarted;
+  await expect(page.locator("#cancelVoiceRender")).toBeVisible();
+  await page.locator("#cancelVoiceRender").click();
+  releaseRenderResolve();
+  await expect(page.locator("#voicePlayStatus")).toContainText("歌唱処理を強制終了しました");
+  await expect(page.locator("#confirmVoicePlay")).not.toBeChecked();
+  await expect(page.locator("#voicePlay")).toBeDisabled();
+});
+
 test("singing UI registers a voicebank and sends the edited score to OpenUtau", async ({ page }) => {
   const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
   const wavPath = path.join(__dirname, "fixtures", "test-tone.wav");
   const renderRequests = [];
+  let registerRequests = 0;
 
   await page.route("**/api/v1/voicebanks/register", async route => {
+    registerRequests++;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -198,4 +231,18 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   expect(sentNotes[0].tone).toBe(62); // D4 remains MIDI 62; no octave offset is applied.
   expect(await page.locator("#octave").count()).toBe(0);
   expect(renderRequests[0]).toContain("phonemizer");
+  expect(registerRequests).toBe(1);
+  expect(await page.evaluate(() => window.VoiceBankStudioVoicebank.getSavedServerArchiveId()))
+    .toBe("browser-e2e-voicebank");
+
+  await page.reload();
+  await expect(page.locator("#vbStatus")).toContainText("保存済み音源を復元しました", { timeout: 15000 });
+  await expect(page.locator("#confirmVoicePlay")).not.toBeChecked();
+  await page.locator("#confirmVoicePlay").check();
+  await page.locator("#voicePlay").click();
+  await expect(page.locator("#voicePlayStatus")).toContainText("歌声の生成が完了しました", {
+    timeout: 15000,
+  });
+  expect(registerRequests).toBe(1);
+  expect(renderRequests).toHaveLength(2);
 });
