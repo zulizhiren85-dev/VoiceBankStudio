@@ -37,6 +37,7 @@ test("project JSON can be exported and imported", async ({ page }) => {
   const filePath = await download.path();
   const saved = JSON.parse(fs.readFileSync(filePath, "utf8"));
   expect(saved.bpm).toBe(128);
+  expect(saved).not.toHaveProperty("octave");
   expect(saved.notes.length).toBe(42);
   const imported = { ...saved, bpm: 136, notes: saved.notes.slice(0, 2) };
   const importPath = path.join(__dirname, "fixtures", "roundtrip-project.json");
@@ -114,6 +115,11 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   await page.locator("#vbZip").setInputFiles(zipPath);
   await expect(page.locator("#vbStatus")).toContainText("読み込み完了", { timeout: 15000 });
 
+  await page.locator("details.song-editor summary").click();
+  const firstPitch = page.locator("#notes .note").first().locator('input[aria-label="pitch"]');
+  await firstPitch.fill("D4");
+  await firstPitch.dispatchEvent("change");
+
   await page.locator("#voicePlay").click();
   await expect(page.locator("#voicePlayStatus")).toContainText("歌声の生成が完了しました", {
     timeout: 15000,
@@ -125,5 +131,9 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   expect(renderRequests[0]).toContain("browser-e2e-voicebank");
   expect(renderRequests[0]).toContain("notesJson");
   expect(renderRequests[0]).toContain('"lyric":"き"');
+  const notesField = new URLSearchParams(renderRequests[0]).get("notesJson");
+  const sentNotes = JSON.parse(notesField);
+  expect(sentNotes[0].tone).toBe(62); // D4 remains MIDI 62; no octave offset is applied.
+  expect(await page.locator("#octave").count()).toBe(0);
   expect(renderRequests[0]).toContain("phonemizer");
 });
