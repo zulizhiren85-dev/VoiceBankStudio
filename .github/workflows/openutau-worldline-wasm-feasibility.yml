@@ -73,17 +73,22 @@ jobs:
         working-directory: ${{ runner.temp }}/OpenUtau/cpp
         run: |
           set -euo pipefail
-          git clone --filter=blob:none https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/OpenUtau/emsdk"
-          git -C "$RUNNER_TEMP/OpenUtau/emsdk" checkout "24fc909c0da13ef641d5ae75e89b5a97f25e37aa"
-          sed -i '1i module(name = "emsdk", version = "4.0.6")' "$RUNNER_TEMP/OpenUtau/emsdk/bazel/MODULE.bazel"
-          cat >> MODULE.bazel <<'EOF'
+          cat >> WORKSPACE.bazel <<'EOF'
 
-          # Isolated browser-port experiment; the upstream revision remains pinned.
-          bazel_dep(name = "emsdk", version = "4.0.6")
-          local_path_override(
-              module_name = "emsdk",
-              path = "../emsdk/bazel",
+          # Isolated Emscripten toolchain; the upstream OpenUtau checkout remains pinned.
+          load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+          git_repository(
+              name = "emsdk",
+              remote = "https://github.com/emscripten-core/emsdk.git",
+              commit = "24fc909c0da13ef641d5ae75e89b5a97f25e37aa",
+              strip_prefix = "bazel",
           )
+          load("@emsdk//:deps.bzl", emsdk_deps = "deps")
+          emsdk_deps()
+          load("@emsdk//:emscripten_deps.bzl", emsdk_emscripten_deps = "emscripten_deps")
+          emsdk_emscripten_deps(emscripten_version = "4.0.6")
+          load("@emsdk//:toolchains.bzl", "register_emscripten_toolchains")
+          register_emscripten_toolchains()
           EOF
           cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
           sed -i '1i load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")' worldline/BUILD.bazel
@@ -117,7 +122,7 @@ jobs:
         run: |
           set -euo pipefail
           USE_BAZEL_VERSION=7.4.1 bazel --version
-          USE_BAZEL_VERSION=7.4.1 bazel build //worldline:worldline-wasm-smoke
+          USE_BAZEL_VERSION=7.4.1 bazel --noenable_bzlmod build --incompatible_enable_cc_toolchain_resolution //worldline:worldline-wasm-smoke
           find bazel-bin/worldline -maxdepth 2 -type f -print | sort
           WASM_JS="$(find bazel-bin/worldline -maxdepth 2 -type f -name '*worldline-wasm-smoke*.js' | head -n 1)"
           test -n "$WASM_JS"
