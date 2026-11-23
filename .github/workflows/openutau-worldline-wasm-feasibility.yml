@@ -153,6 +153,7 @@ jobs:
           set -euo pipefail
           USE_BAZEL_VERSION=7.4.1 bazel --version
           USE_BAZEL_VERSION=7.4.1 bazel build --noenable_bzlmod --incompatible_enable_cc_toolchain_resolution //worldline:worldline-wasm-smoke
+          USE_BAZEL_VERSION=7.4.1 bazel build --noenable_bzlmod --incompatible_enable_cc_toolchain_resolution //worldline:worldline-wasm-api
           find bazel-bin/worldline -maxdepth 2 -type f -print | sort
           WASM_DIR="bazel-bin/worldline/worldline-wasm-smoke"
           WASM_JS="$WASM_DIR/worldline_wasm_smoke_binary.js"
