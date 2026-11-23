@@ -128,3 +128,36 @@ Do not start by porting the whole Core assembly. First create a small browser-ta
 ### Immediate engineering task
 
 Create an Emscripten build experiment for the pinned `cpp/worldline` target, initially exporting only the F0/WORLD analysis and synthesis functions required by the Worldline C# wrapper. Add a tiny deterministic input fixture and verify the output is finite, non-empty PCM. In parallel, compile a minimal .NET browser project containing one existing Japanese phonemizer and compare aliases against the existing server smoke test. These are independent proof points and should be kept separate until both pass.
+
+
+## Server HTTP 429 diagnosis (2026-11-23)
+
+Inspection of the current branch's `VoicebankRenderEndpoint.RenderAsync` found a direct application-level cause:
+
+- The endpoint calls `EngineWorkGate.Gate.WaitAsync(0)`.
+- `EngineWorkGate.Gate` is a `SemaphoreSlim(1, 1)`, so only one registration/render operation can hold it at a time.
+- If another operation is still holding the gate, the render endpoint immediately returns HTTP 429. This is not, by itself, proof that Render's platform-wide inbound rate limiter rejected the request.
+- The gate is also held during ZIP extraction, voicebank loading, rendering, and cleanup. A large voicebank can therefore occupy the only slot for a long time.
+- Phrase-level parallelism inside one render is separate from request-level concurrency; the current two-phrase optimization does not allow a second HTTP render request.
+
+This is a confirmed code path that can explain the user's 429. Before changing server concurrency, inspect request logs and client retries to determine whether overlapping requests are occurring. Do not simply increase the semaphore count: the OpenUtau host uses shared global managers and a single engine synchronization thread, so concurrent requests may corrupt shared project/singer/cache state.
+
+## Revised port policy: preserve upstream C# and C++ first
+
+The user's preference is to change OpenUtau as little as possible. Prefer a source-preserving browser port over reimplementing the synthesis engine:
+
+1. Keep the pinned upstream OpenUtau C# Core and Builtin phonemizer source as intact as feasible. Introduce a browser-targeted build configuration and narrow adapter interfaces only where desktop APIs prevent compilation.
+2. Include the upstream C++ Worldline source in the port. Add an Emscripten build target alongside the existing Bazel/native targets rather than replacing Worldline with a different DSP engine.
+3. Replace only the native interop boundary: the current C# `DllImport("worldline")` calls cannot load a desktop shared library in Safari. Expose the same Worldline operations from a WASM module and bridge them through browser-compatible interop.
+4. Keep source revisions pinned and maintain upstream license/copyright notices. Track any local patches separately so they can be rebased.
+5. Avoid broad rewrites of pitch, phoneme, oto timing, overlap, envelope, or phrase scheduling. Add regression fixtures comparing browser output and the native server reference.
+
+The Emscripten work is a feasibility milestone, not a claim that the current Bazel target can already be built for the browser. Its dependencies (including WORLD and Abseil-related code) must be verified and any unsupported platform calls isolated.
+
+## Immediate next milestones
+
+- Build a minimal Emscripten Worldline module from the pinned upstream C++ source, exporting the required analysis/synthesis ABI.
+- Verify it against a deterministic WAV fixture in a normal desktop browser first, then iPad Safari.
+- Build the closest feasible browser-targeted OpenUtau C# Core slice while preserving upstream source and phonemizer logic.
+- Add tests proving the same Japanese VCV/CVVC aliases and timing are produced as the server reference.
+- Only after both parts pass, connect the Core to the Worldline WASM bridge and attempt a short offline-rendered phrase.
