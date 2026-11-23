@@ -139,7 +139,7 @@ test("singing can be force-cancelled while the voicebank upload is active", asyn
   await registrationStarted;
   await expect(page.locator("#cancelVoiceRender")).toBeVisible();
   await page.locator("#cancelVoiceRender").click();
-  await expect(page.locator("#voicePlayStatus")).toContainText("歌唱処理を強制終了しました");
+  await expect(page.locator("#voicePlayStatus")).toContainText("ブラウザからの通信を切断しました");
   await expect(page.locator("#confirmVoicePlay")).not.toBeChecked();
   await expect(page.locator("#voicePlay")).toBeDisabled();
 });
@@ -170,7 +170,7 @@ test("singing render request can be force-cancelled", async ({ page }) => {
   await expect(page.locator("#cancelVoiceRender")).toBeVisible();
   await page.locator("#cancelVoiceRender").click();
   releaseRenderResolve();
-  await expect(page.locator("#voicePlayStatus")).toContainText("歌唱処理を強制終了しました");
+  await expect(page.locator("#voicePlayStatus")).toContainText("ブラウザからの通信を切断しました");
   await expect(page.locator("#confirmVoicePlay")).not.toBeChecked();
   await expect(page.locator("#voicePlay")).toBeDisabled();
 });
