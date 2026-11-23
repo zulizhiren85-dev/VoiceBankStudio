@@ -83,6 +83,12 @@ jobs:
 
           # Isolated browser-port experiment; the upstream revision remains pinned.
           bazel_dep(name = "emsdk", version = "4.0.6")
+          git_override(
+              module_name = "emsdk",
+              remote = "https://github.com/emscripten-core/emsdk.git",
+              strip_prefix = "bazel",
+              tag = "4.0.6",
+          )
           EOF
           cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
           sed -i '1i load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")' worldline/BUILD.bazel
