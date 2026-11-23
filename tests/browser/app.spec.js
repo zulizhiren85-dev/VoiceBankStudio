@@ -87,3 +87,43 @@ test("video URL registration validates service and enables preview", async ({ pa
   await expect(page.locator("#videoPreview")).toBeVisible();
   await expect(page.locator("#youtubeFrame")).toHaveAttribute("src", /youtube-nocookie\.com\/embed/);
 });
+
+
+test("singing UI registers a voicebank and sends the edited score to OpenUtau", async ({ page }) => {
+  const zipPath = path.join(__dirname, "fixtures", "test-voicebank.zip");
+  const wavPath = path.join(__dirname, "fixtures", "test-tone.wav");
+  const renderRequests = [];
+
+  await page.route("**/api/v1/voicebanks/register", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ archiveId: "browser-e2e-voicebank" }),
+    });
+  });
+
+  await page.route("**/api/v1/render", async route => {
+    renderRequests.push(route.request().postData() || "");
+    await route.fulfill({
+      status: 200,
+      contentType: "audio/wav",
+      body: fs.readFileSync(wavPath),
+    });
+  });
+
+  await page.locator("#vbZip").setInputFiles(zipPath);
+  await expect(page.locator("#vbStatus")).toContainText("読み込み完了", { timeout: 15000 });
+
+  await page.locator("#voicePlay").click();
+  await expect(page.locator("#voicePlayStatus")).toContainText("歌声の生成が完了しました", {
+    timeout: 15000,
+  });
+  await expect(page.locator("#playRender")).toBeEnabled();
+  await expect(page.locator("#downloadRender")).toBeEnabled();
+
+  expect(renderRequests).toHaveLength(1);
+  expect(renderRequests[0]).toContain("browser-e2e-voicebank");
+  expect(renderRequests[0]).toContain("notesJson");
+  expect(renderRequests[0]).toContain('"lyric":"き"');
+  expect(renderRequests[0]).toContain("phonemizer");
+});
