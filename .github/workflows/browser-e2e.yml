@@ -35,6 +35,7 @@ jobs:
           python-version: "3.x"
       - name: Install Playwright
         run: |
+          npm init -y
           npm install --no-save @playwright/test
           npx playwright install --with-deps chromium
       - name: Create deterministic audio and voicebank fixtures
