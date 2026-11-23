@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "index.html"
-      - "voicebank.js"
+      - "voicebank.js"\n      - "voicebank-create.js"
       - ".github/workflows/web-checks.yml"
   pull_request:
     paths:
@@ -21,7 +21,9 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check voicebank.js\n          node --check voicebank-create.js
+        run: |
+          node --check voicebank.js
+          node --check voicebank-create.js
       - name: Check inline app JavaScript
         run: |
           python - <<'PY'
