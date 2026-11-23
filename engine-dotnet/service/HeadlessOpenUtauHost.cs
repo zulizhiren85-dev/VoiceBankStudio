@@ -169,6 +169,8 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             // Mix each phrase immediately, then let its temporary sample buffer go.
             logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
                 phrases.Length, 1);
+            logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
+                phrases.Length, 1);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             float[] mixed = Array.Empty<float>();
             int totalSamples = 0;
