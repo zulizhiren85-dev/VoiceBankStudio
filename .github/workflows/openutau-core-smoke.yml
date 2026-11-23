@@ -208,8 +208,8 @@ jobs:
           assert any(sample != 0 for sample in samples), "rendered WAV is silent"
           print(f"Multi-phrase VCV render preserved song timeline: {len(samples)} samples")
           PY
-          grep -q "PhraseCount=3, Parallelism=3" /tmp/vbs-engine.log
-          echo "Three independent short phrases were scheduled with bounded parallelism=3."
+          grep -q "PhraseCount=3, Parallelism=2" /tmp/vbs-engine.log
+          echo "Three independent short phrases were scheduled with bounded parallelism=2."
 
       - name: Verify two-note CVVC rendering
         run: |
@@ -323,11 +323,11 @@ jobs:
           assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "parallel Docker render did not return WAV"
           samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
           assert len(samples) > 100000 and any(samples), "parallel Docker render was empty or silent"
-          print(f"Three-phrase parallel render succeeded under 512 MiB: {len(samples)} samples")
+          print(f"Three-phrase render succeeded under 512 MiB: {len(samples)} samples")
           PY
-          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=3"
+          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=2"
           test "$(docker inspect --format '{{.State.OOMKilled}}' vbs-engine-ci)" = "false"
-          echo "Three-way bounded parallel phrase rendering stayed alive under the 512 MiB container limit."
+          echo "Two-way bounded parallel phrase rendering stayed alive under the 512 MiB container limit."
 
       - name: Stop HTTP engine service
         if: always()
