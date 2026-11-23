@@ -98,7 +98,13 @@ jobs:
           assert result["phonemizerTests"]["cv"] == ["- か"], result
           assert result["phonemizerTests"]["cvvc"] == ["low_あ", "a k"], result
           assert result["prefixMapTests"] == {"c4": "low_あ", "c5": "high_あ"}, result
-          print("OpenUtau voicebank + oto.ini + Japanese VCV phonemizer: OK")
+          pitch_map = {entry["tone"]: entry for entry in result["pitchMap"]}
+          assert pitch_map[60]["alias"] == "low_あ", pitch_map[60]
+          assert pitch_map[71]["alias"] == "low_あ", pitch_map[71]
+          assert pitch_map[72]["alias"] == "high_あ", pitch_map[72]
+          assert pitch_map[84]["alias"] == "high_あ", pitch_map[84]
+          assert pitch_map[60]["file"] == "a.wav", pitch_map[60]
+          print("OpenUtau voicebank + VCV + pitch-aware prefix.map source selection: OK")
           PY
 
 
