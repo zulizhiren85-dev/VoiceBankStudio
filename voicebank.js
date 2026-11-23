@@ -70,7 +70,7 @@ async function preview(path,button){
   if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=URL.createObjectURL(blob);const audio=$("vbAudio");audio.src=state.audioUrl;audio.classList.remove("hidden");await audio.play();button.textContent="▶ 再試聴";
  }catch(e){$("vbStatus").textContent="試聴エラー: "+e.message;button.textContent="▶ 試聴";}finally{button.disabled=false;}
 }
-async function loadFiles(files,mode){
+async function loadFiles(files,mode,options={}){
  stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;$("vbStatus").textContent="音源を調べています…";$("vbRows").replaceChildren();
  const list=Array.from(files||[]);if(!list.length)throw Error("ファイルが選択されていません。");
  if(mode==="zip"){
@@ -91,10 +91,15 @@ async function loadFiles(files,mode){
  if(!state.rows.length)throw Error("oto.iniは見つかりましたが、有効な設定行がありません。");
  const missing=state.rows.filter(r=>!state.files.has(r.file)&&!state.entries.has(r.file)).length;render();
  $("vbStatus").textContent="読み込み完了！ oto.ini "+state.rows.length+"件 / WAV "+(state.files.size+[...state.entries.keys()].filter(x=>x.toLowerCase().endsWith(".wav")).length)+"件 / WAV欠損参照 "+missing+"件。音源データは端末内で処理され、サーバーには送信されません。";
+ if(mode==="zip"&&options.persist!==false){
+  $("vbStatus").textContent+="\\n端末内ストレージへ音源ZIPを保存しています…";
+  try{await saveVoicebankArchive(list[0]);$("vbStatus").textContent+="\\n端末内保存完了。次回起動時に自動復元します。";}
+  catch(error){$("vbStatus").textContent+="\\n端末内保存は未完了（"+error.message+"）。この画面を閉じると再読み込みが必要です。";}
+ }
 }
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbFolder").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"folder");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
-$("vbClear").addEventListener("click",()=>{stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
+$("vbClear").addEventListener("click",()=>{deleteVoicebankArchive().catch(()=>{});stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
 
 const decodedCache=new Map();let synthContext=null,synthSources=[];
 function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
@@ -217,5 +222,15 @@ async function playNotes(notes,options={}){
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
 window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,getAliases:()=>state.rows.map(row=>row.alias),playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
+(async()=>{
+ try{
+  const saved=await getVoicebankArchive();if(!saved||!saved.blob||!saved.blob.size)return;
+  if(state.rows.length)return;
+  $("vbStatus").textContent="端末内に保存されたUTAU音源を復元しています…";
+  const file=new File([saved.blob],saved.name||"saved-voicebank.zip",{type:saved.type||"application/zip"});
+  await loadFiles([file],"zip",{persist:false});
+  $("vbStatus").textContent+="\\n保存済み音源を復元しました。再アップロードは不要です。";
+ }catch(error){$("vbStatus").textContent="保存済み音源の自動復元に失敗しました: "+error.message+"。必要ならZIPを再選択してください。";}
+})();
 
 })();
