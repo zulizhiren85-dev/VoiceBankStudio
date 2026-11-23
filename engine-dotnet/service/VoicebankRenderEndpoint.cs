@@ -146,10 +146,7 @@ public static class VoicebankRenderEndpoint
             logger.LogInformation("Calling headless OpenUtau renderer. Notes={NoteCount}, Phonemizer={Phonemizer}", noteList.Count, selectedPhonemizer);
             var samples = await host.RenderAsync(singer, noteList, selectedPhonemizer, bpm, cancellationToken);
             logger.LogInformation("Headless OpenUtau renderer returned. Samples={SampleCount}", samples.Length);
-            return Results.Stream(
-                (stream, responseCancellation) => WriteMono16WavAsync(stream, samples, 44100, responseCancellation),
-                "audio/wav",
-                "VoiceBankStudio-render.wav");
+            return new StreamingWavResult(samples);
         }
         catch (InvalidDataException ex)
         {
@@ -220,6 +217,19 @@ public static class VoicebankRenderEndpoint
                 buffer[i * 2 + 1] = (byte)(value >> 8);
             }
             await stream.WriteAsync(buffer.AsMemory(0, count * sizeof(short)), cancellationToken);
+        }
+    }
+
+    private sealed class StreamingWavResult(float[] samples) : IResult
+    {
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            var response = httpContext.Response;
+            response.StatusCode = StatusCodes.Status200OK;
+            response.ContentType = "audio/wav";
+            response.Headers["Content-Disposition"] = "attachment; filename=\"VoiceBankStudio-render.wav\"";
+            response.ContentLength = checked(44L + samples.LongLength * sizeof(short));
+            await WriteMono16WavAsync(response.Body, samples, 44100, httpContext.RequestAborted);
         }
     }
 }
