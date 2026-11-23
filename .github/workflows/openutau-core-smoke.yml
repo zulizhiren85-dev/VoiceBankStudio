@@ -255,7 +255,16 @@ jobs:
           assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
           samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
           assert len(samples) > 20000 and any(sample != 0 for sample in samples), "high-pitch render failed"
-          print("OpenUtau prefix.map high-pitch render: OK")
+          # The source fixture is 220 Hz (A3); a C5 target must be rendered near 523.25 Hz.
+          # Estimate F0 with normalized autocorrelation after the initial consonant/attack area.
+          signal = [sample / 32768.0 for sample in samples[2205:6615]]
+          correlations = {}
+          for lag in range(70, 100):
+              correlations[lag] = sum(signal[i] * signal[i + lag] for i in range(len(signal) - lag))
+          best_lag = max(correlations, key=correlations.get)
+          estimated_f0 = 44100 / best_lag
+          assert 490 <= estimated_f0 <= 560, f"Worldline-R pitch conversion incorrect: {estimated_f0:.1f} Hz"
+          print(f"OpenUtau prefix.map + Worldline-R pitch conversion: {estimated_f0:.1f} Hz (target C5)")
           PY
 
       - name: Build and run Core/Builtin smoke test
