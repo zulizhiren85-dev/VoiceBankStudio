@@ -30,12 +30,9 @@ public static class VoicebankRenderEndpoint
         var logger = loggerFactory.CreateLogger("VoiceBankStudio.Engine.RenderEndpoint");
         logger.LogInformation("Render request accepted. ArchiveIdPresent={ArchiveIdPresent}, UploadedArchive={UploadedArchive}, NotesJsonLength={NotesJsonLength}", !string.IsNullOrWhiteSpace(archiveId), archive is not null, notesJson?.Length ?? 0);
         string? cachedArchivePath = null;
-        if (archive is null)
-        {
-            if (!VoicebankArchiveCache.TryGetPath(archiveId, out cachedArchivePath))
-                return Results.NotFound(new { error = "音源の一時登録が期限切れです。音源をもう一度登録してください。" });
-        }
-        else
+        if (archive is null && string.IsNullOrWhiteSpace(archiveId))
+            return Results.NotFound(new { error = "音源IDがありません。音源をもう一度登録してください。" });
+        else if (archive is not null)
         {
             if (archive.Length == 0)
                 return Results.BadRequest(new { error = "UTAU音源ZIPを選択してください。" });
@@ -48,56 +45,74 @@ public static class VoicebankRenderEndpoint
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
 
         var jobRoot = Path.Combine(Path.GetTempPath(), "voicebankstudio-render", Guid.NewGuid().ToString("N"));
-        var extractRoot = Path.Combine(jobRoot, "voicebank");
+        string extractRoot = Path.Combine(jobRoot, "voicebank");
+        bool extractionCacheHit = false;
         try
         {
-            Directory.CreateDirectory(extractRoot);
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            var encoding = Encoding.GetEncoding(932);
-            long expandedBytes = 0;
-            int entries = 0;
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            if (archive is null && !VoicebankArchiveCache.TryGetPath(archiveId, out cachedArchivePath))
+                return Results.NotFound(new { error = "音源の一時登録が期限切れです。音源をもう一度登録してください。" });
 
-            await using (var input = archive is not null
-                ? archive.OpenReadStream()
-                : new FileStream(cachedArchivePath!, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, useAsync: true))
-            using (var zip = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: false, entryNameEncoding: encoding))
+            if (archive is null && VoicebankArchiveCache.TryGetExtractedPath(archiveId, out var cachedExtractRoot))
             {
-                foreach (var entry in zip.Entries)
+                extractRoot = cachedExtractRoot;
+                extractionCacheHit = true;
+                logger.LogInformation("Using cached extracted voicebank. ArchiveIdPresent={ArchiveIdPresent}", true);
+            }
+            else
+            {
+                Directory.CreateDirectory(extractRoot);
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                var encoding = Encoding.GetEncoding(932);
+                long expandedBytes = 0;
+                int entries = 0;
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+
+                await using (var input = archive is not null
+                    ? archive.OpenReadStream()
+                    : new FileStream(cachedArchivePath!, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, useAsync: true))
+                using (var zip = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: false, entryNameEncoding: encoding))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (++entries > MaxEntries)
-                        return Results.BadRequest(new { error = "ZIP内のファイル数が50000件を超えています。" });
-                    var relative = entry.FullName.Replace('\\', '/');
-                    if (string.IsNullOrWhiteSpace(relative) || relative.EndsWith('/'))
-                        continue;
-                    if (relative.StartsWith('/') || Path.IsPathRooted(relative) ||
-                        relative.Contains(':') || relative.Split('/').Any(p => p is "." or ".."))
-                        return Results.BadRequest(new { error = "ZIP内に不正なファイルパスがあります。" });
-                    if (!seen.Add(relative))
-                        return Results.BadRequest(new { error = "ZIP内に重複したファイル名があります。" });
-
-                    var destination = Path.GetFullPath(Path.Combine(extractRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
-                    var prefix = Path.GetFullPath(extractRoot) + Path.DirectorySeparatorChar;
-                    if (!destination.StartsWith(prefix, StringComparison.Ordinal))
-                        return Results.BadRequest(new { error = "ZIP内に許可されないファイルパスがあります。" });
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                    await using var source = entry.Open();
-                    await using var target = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-                    var buffer = new byte[64 * 1024];
-                    int read;
-                    while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+                    foreach (var entry in zip.Entries)
                     {
-                        expandedBytes += read;
-                        if (expandedBytes > MaxExpandedBytes)
-                            return Results.BadRequest(new { error = "ZIPの展開後サイズが1GBを超えています。" });
-                        await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (++entries > MaxEntries)
+                            return Results.BadRequest(new { error = "ZIP内のファイル数が50000件を超えています。" });
+                        var relative = entry.FullName.Replace('\\', '/');
+                        if (string.IsNullOrWhiteSpace(relative) || relative.EndsWith('/'))
+                            continue;
+                        if (relative.StartsWith('/') || Path.IsPathRooted(relative) ||
+                            relative.Contains(':') || relative.Split('/').Any(p => p is "." or ".."))
+                            return Results.BadRequest(new { error = "ZIP内に不正なファイルパスがあります。" });
+                        if (!seen.Add(relative))
+                            return Results.BadRequest(new { error = "ZIP内に重複したファイル名があります。" });
+
+                        var destination = Path.GetFullPath(Path.Combine(extractRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+                        var prefix = Path.GetFullPath(extractRoot) + Path.DirectorySeparatorChar;
+                        if (!destination.StartsWith(prefix, StringComparison.Ordinal))
+                            return Results.BadRequest(new { error = "ZIP内に許可されないファイルパスがあります。" });
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                        await using var source = entry.Open();
+                        await using var target = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                        var buffer = new byte[64 * 1024];
+                        int read;
+                        while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+                        {
+                            expandedBytes += read;
+                            if (expandedBytes > MaxExpandedBytes)
+                                return Results.BadRequest(new { error = "ZIPの展開後サイズが1GBを超えています。" });
+                            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                        }
                     }
                 }
-            }
 
-            logger.LogInformation("Voicebank ZIP extraction completed. Entries={EntryCount}, ExpandedBytes={ExpandedBytes}", entries, expandedBytes);
+                logger.LogInformation("Voicebank ZIP extraction completed. Entries={EntryCount}, ExpandedBytes={ExpandedBytes}", entries, expandedBytes);
+                if (archive is null && VoicebankArchiveCache.TryStoreExtractedPath(archiveId, extractRoot, out var storedExtractRoot))
+                {
+                    extractRoot = storedExtractRoot;
+                    logger.LogInformation("Extracted voicebank cached for reuse.");
+                }
+            }
             var characterFiles = Directory.EnumerateFiles(extractRoot, "character.txt", SearchOption.AllDirectories)
                 .Take(2).ToArray();
             if (characterFiles.Length != 1)
