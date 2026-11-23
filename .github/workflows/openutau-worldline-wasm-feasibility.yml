@@ -87,7 +87,7 @@ jobs:
               module_name = "emsdk",
               remote = "https://github.com/emscripten-core/emsdk.git",
               strip_prefix = "bazel",
-              tag = "4.0.6",
+              commit = "24fc909c0da13ef641d5ae75e89b5a97f25e37aa",
           )
           EOF
           cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
