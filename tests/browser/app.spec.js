@@ -16,6 +16,7 @@ test("main interface loads without uncaught page errors", async ({ page }) => {
 });
 
 test("score notes can be added, edited, and deleted", async ({ page }) => {
+  await page.locator("details.song-editor summary").click();
   const initial = await page.locator("#notes .note").count();
   await page.locator("#add").click();
   await expect(page.locator("#notes .note")).toHaveCount(initial + 1);
