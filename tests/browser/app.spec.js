@@ -131,7 +131,8 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   expect(renderRequests[0]).toContain("browser-e2e-voicebank");
   expect(renderRequests[0]).toContain("notesJson");
   expect(renderRequests[0]).toContain('"lyric":"き"');
-  const notesField = new URLSearchParams(renderRequests[0]).get("notesJson");
+  const notesField = renderRequests[0].match(/name="notesJson"\r\n\r\n([^\r]+)/)?.[1];
+  expect(notesField).toBeTruthy();
   const sentNotes = JSON.parse(notesField);
   expect(sentNotes[0].tone).toBe(62); // D4 remains MIDI 62; no octave offset is applied.
   expect(await page.locator("#octave").count()).toBe(0);
