@@ -129,12 +129,9 @@ function kanaVowel(ch){
 }
 function finalKanaVowel(text){
  const chars=Array.from(String(text||'').trim());
- for(let i=chars.length-1;i>=0;i--){
-  if(chars[i]==='ー')continue;
-  const vowel=kanaVowel(chars[i]);
-  if(vowel)return vowel;
- }
- return null;
+ let i=chars.length-1;
+ while(i>=0&&chars[i]==='ー')i--;
+ return i>=0?kanaVowel(chars[i]):null;
 }
 function normalizeLongVowelLyric(lyric,previousLyric=''){
  let out='';
