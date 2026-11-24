@@ -126,8 +126,8 @@ public static class VoicebankRenderEndpoint
                     : "複数の音源が含まれています。1音源ずつZIPにしてください。" });
 
             var noteList = JsonSerializer.Deserialize<List<SingingNote>>(notesJson, JsonOptions);
-            if (noteList is null || noteList.Count is < 1 or > 500)
-                return Results.BadRequest(new { error = "歌詞・音程データは1〜500音符で指定してください。" });
+            if (noteList is null || noteList.Count is < 1 or > 1000)
+                return Results.BadRequest(new { error = "歌詞・音程データは1〜1000音符で指定してください。" });
 
             logger.LogInformation("Voicebank metadata located. Starting OpenUtau voicebank load.");
             var bank = new Voicebank();
