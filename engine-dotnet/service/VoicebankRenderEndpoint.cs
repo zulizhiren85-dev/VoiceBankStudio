@@ -196,6 +196,7 @@ public static class VoicebankRenderEndpoint
                 BitConverter.GetBytes(checked((int)(36L + sampleCount * sizeof(short)))).CopyTo(header, 4);
                 Encoding.ASCII.GetBytes("WAVE").CopyTo(header, 8);
                 Encoding.ASCII.GetBytes("fmt ").CopyTo(header, 12);
+                Encoding.ASCII.GetBytes("data").CopyTo(header, 36);
                 BitConverter.GetBytes(16).CopyTo(header, 16);
                 BitConverter.GetBytes((short)1).CopyTo(header, 20);
                 BitConverter.GetBytes((short)1).CopyTo(header, 22);
