@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace VoiceBankStudio.Engine;
 
 public sealed record SingingNote(string lyric, int tone, int position, int duration);
+public sealed record RenderedAudioFile(string Path, long SampleCount);
 
 public sealed class HeadlessOpenUtauHost : IDisposable
 {
@@ -81,7 +82,7 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             TaskCreationOptions.DenyChildAttach, scheduler);
     }
 
-    public async Task<float[]> RenderAsync(
+    public async Task<RenderedAudioFile> RenderToFileAsync(
         ClassicSinger singer,
         IReadOnlyList<SingingNote> notes,
         string phonemizer,
@@ -94,6 +95,8 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             throw new ArgumentException("BPMは40〜300の範囲にしてください。");
 
         logger.LogInformation("OpenUtau render started. Notes={NoteCount}, Phonemizer={Phonemizer}, BPM={Bpm}", notes.Count, phonemizer, bpm);
+        var outputPath = Path.Combine(Path.GetTempPath(), "voicebankstudio-render-" + Guid.NewGuid().ToString("N") + ".f32");
+        bool outputTransferred = false;
         try
         {
             var state = await OnEngineThread(() =>
@@ -170,8 +173,10 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             logger.LogInformation("Phrase render scheduling. PhraseCount={PhraseCount}, Parallelism={Parallelism}",
                 phrases.Length, 1);
             using var renderCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            float[] mixed = Array.Empty<float>();
-            int totalSamples = 0;
+            long totalSamples = 0;
+            await using (var mixedFile = new FileStream(outputPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 1024 * 1024, useAsync: true))
+            {
+            byte[] mixBuffer = new byte[64 * 1024];
             for (int index = 0; index < phrases.Length; index++)
             {
                 renderCancellation.Token.ThrowIfCancellationRequested();
@@ -202,14 +207,42 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                     continue;
 
                 int requiredSamples = checked(destinationStart + available);
-                if (requiredSamples > mixed.Length)
-                {
-                    int capacity = Math.Max(requiredSamples, mixed.Length == 0 ? 4096 : checked(mixed.Length * 2));
-                    Array.Resize(ref mixed, capacity);
-                }
+                if (requiredSamples > int.MaxValue)
+                    throw new InvalidOperationException("歌唱結果が大きすぎます。");
+                long requiredBytes = checked((long)requiredSamples * sizeof(float));
+                if (mixedFile.Length < requiredBytes)
+                    mixedFile.SetLength(requiredBytes);
 
-                for (int i = 0; i < available; i++)
-                    mixed[destinationStart + i] += phraseSamples[sourceOffset + i];
+                // Mix directly into a temporary file in bounded blocks. This avoids
+                // retaining a full-song float[] in the 512 MiB service process.
+                const int samplesPerBlock = 8192;
+                for (int blockStart = 0; blockStart < available; blockStart += samplesPerBlock)
+                {
+                    renderCancellation.Token.ThrowIfCancellationRequested();
+                    int count = Math.Min(samplesPerBlock, available - blockStart);
+                    int byteCount = count * sizeof(float);
+                    long fileOffset = checked(((long)destinationStart + blockStart) * sizeof(float));
+                    mixedFile.Position = fileOffset;
+                    int readTotal = 0;
+                    while (readTotal < byteCount)
+                    {
+                        int read = await mixedFile.ReadAsync(mixBuffer.AsMemory(readTotal, byteCount - readTotal), renderCancellation.Token);
+                        if (read == 0) break;
+                        readTotal += read;
+                    }
+                    if (readTotal < byteCount)
+                        Array.Clear(mixBuffer, readTotal, byteCount - readTotal);
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        int offset = i * sizeof(float);
+                        float current = BitConverter.ToSingle(mixBuffer, offset);
+                        float value = current + phraseSamples[sourceOffset + blockStart + i];
+                        BitConverter.TryWriteBytes(mixBuffer.AsSpan(offset, sizeof(float)), value);
+                    }
+                    mixedFile.Position = fileOffset;
+                    await mixedFile.WriteAsync(mixBuffer.AsMemory(0, byteCount), renderCancellation.Token);
+                }
                 totalSamples = Math.Max(totalSamples, requiredSamples);
 
                 // Capture memory pressure while rendering long songs. Render's
@@ -230,10 +263,12 @@ public sealed class HeadlessOpenUtauHost : IDisposable
             if (totalSamples == 0)
                 throw new InvalidOperationException("OpenUtauレンダラーから有効な音声データが返りませんでした。");
 
-            if (mixed.Length != totalSamples)
-                Array.Resize(ref mixed, totalSamples);
-            logger.LogInformation("OpenUtau render completed. TotalSamples={TotalSamples}", mixed.Length);
-            return mixed;
+            mixedFile.SetLength(checked(totalSamples * sizeof(float)));
+            await mixedFile.FlushAsync(cancellationToken);
+            }
+            outputTransferred = true;
+            logger.LogInformation("OpenUtau render completed to disk. TotalSamples={TotalSamples}, OutputBytes={OutputBytes}", totalSamples, checked(totalSamples * sizeof(float)));
+            return new RenderedAudioFile(outputPath, totalSamples);
         }
         catch (Exception ex)
         {
@@ -242,6 +277,10 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         }
         finally
         {
+            if (!outputTransferred)
+            {
+                try { if (File.Exists(outputPath)) File.Delete(outputPath); } catch { }
+            }
             logger.LogInformation("OpenUtau render cleanup started.");
             try
             {
