@@ -411,7 +411,7 @@ async function registerVoicebankArchive(archive,report){
   xhr.upload.onprogress=e=>{if(e.lengthComputable){const percent=Math.floor(e.loaded/e.total*100);report('音源を初回送信中… '+percent+'%（'+(e.loaded/1024/1024).toFixed(1)+' / '+(e.total/1024/1024).toFixed(1)+' MB）');}};
   xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;const body=xhr.response||{};if(xhr.status>=200&&xhr.status<300&&body.archiveId)resolve(body);else reject(new Error(body.error||body.detail||('音源登録エラー HTTP '+xhr.status)));};
   xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録中に通信が切断されました。通信状態を確認して再試行してください。'));};
-  xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録がタイムアウトしました。もう一度お試しください。'));};
+  xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録が2時間でタイムアウトしました。通信状態とサーバーの状態を確認してください。'));};
   xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録が中断されました。'));};
   xhr.send(form);
  });
