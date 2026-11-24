@@ -88,8 +88,8 @@ public sealed class HeadlessOpenUtauHost : IDisposable
         double bpm,
         CancellationToken cancellationToken)
     {
-        if (notes.Count is < 1 or > 500)
-            throw new ArgumentException("音符は1〜500個にしてください。");
+        if (notes.Count is < 1 or > 1000)
+            throw new ArgumentException("音符は1〜1000個にしてください。");
         if (!double.IsFinite(bpm) || bpm is < 40 or > 300)
             throw new ArgumentException("BPMは40〜300の範囲にしてください。");
 
