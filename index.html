@@ -508,10 +508,11 @@ $('voicePlay').addEventListener('click',async()=>{
     activeVoiceRenderXhr=xhr;
     xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/render');
     xhr.responseType='blob';
-    xhr.timeout=15*60*1000;
+    // Long UTAU songs can require more than 15 minutes on the free engine instance.
+    xhr.timeout=45*60*1000;
     xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;resolve({status:xhr.status,blob:xhr.response});};
     xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱サーバーとの通信に失敗しました。CORS設定またはネットワーク接続を確認してください。'));};
-    xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱処理が15分でタイムアウトしました。サーバー側の処理時間を確認します。'));};
+    xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱処理が45分でタイムアウトしました。サーバー側の処理時間を確認します。'));};
     xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱リクエストが中断されました。'));};
     xhr.send(form);
    });
