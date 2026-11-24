@@ -211,6 +211,20 @@ public sealed class HeadlessOpenUtauHost : IDisposable
                 for (int i = 0; i < available; i++)
                     mixed[destinationStart + i] += phraseSamples[sourceOffset + i];
                 totalSamples = Math.Max(totalSamples, requiredSamples);
+
+                // Capture memory pressure while rendering long songs. Render's
+                // temporary phrase buffers can grow sharply even when phrases
+                // are processed sequentially, so keep checkpoints for diagnosis.
+                if ((index + 1) % 8 == 0 || index + 1 == phrases.Length)
+                {
+                    logger.LogInformation(
+                        "Render memory checkpoint. Phrase={PhraseIndex}/{PhraseCount}, ManagedBytes={ManagedBytes}, WorkingSetBytes={WorkingSetBytes}, AvailableMemoryBytes={AvailableMemoryBytes}",
+                        index + 1,
+                        phrases.Length,
+                        GC.GetTotalMemory(false),
+                        Environment.WorkingSet,
+                        GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
+                }
             }
 
             if (totalSamples == 0)
