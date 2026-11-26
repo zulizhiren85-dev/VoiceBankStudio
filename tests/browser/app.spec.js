@@ -347,7 +347,7 @@ test("singing UI registers a voicebank and sends the edited score to OpenUtau", 
   await expect(page.locator("#voicePlay")).toBeDisabled();
 
   await page.locator("details.song-editor summary").click();
-  await page.locator("#keyShift").fill("0"); // Keep this test focused on the entered MIDI pitch.
+  await page.locator("#keyShift").selectOption("0"); // Keep this test focused on the entered MIDI pitch.
   const firstPitch = page.locator("#notes .note").first().locator('input[aria-label="pitch"]');
   await firstPitch.fill("D4");
   await firstPitch.dispatchEvent("change");
