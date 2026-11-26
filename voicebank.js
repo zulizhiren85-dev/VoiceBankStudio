@@ -2,7 +2,44 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const state={entries:new Map(),files:new Map(),rows:[],prefixMap:new Map(),audioUrl:null,archive:null};
-const MAX_ARCHIVE=1024*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
+const MAX_ARCHIVE=800*1024*1024,MAX_ENTRIES=50000,MAX_TEXT=16*1024*1024;
+const VOICEBANK_DB="VoiceBankStudioLocalBanks",VOICEBANK_STORE="banks";
+function openVoicebankDB(){
+ return new Promise((resolve,reject)=>{
+  if(!("indexedDB" in window)){reject(Error("このブラウザでは端末内保存を利用できません。"));return;}
+  const request=indexedDB.open(VOICEBANK_DB,1);
+  request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(VOICEBANK_STORE))db.createObjectStore(VOICEBANK_STORE);};
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error||Error("端末内保存を開けません。"));
+ });
+}
+async function saveVoicebankArchive(file){
+ if(navigator.storage&&navigator.storage.persist){
+  try{await navigator.storage.persist();}catch(_){}
+ }
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).put({blob:file,name:file.name,type:file.type||"application/zip",lastModified:file.lastModified||0,serverArchiveId:null,savedAt:Date.now()},"active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("音源保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("音源保存が中断されました。容量不足の可能性があります。"));});}
+ finally{db.close();}
+}
+async function updateSavedServerArchiveId(archiveId){
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite"),store=tx.objectStore(VOICEBANK_STORE),request=store.get("active");request.onsuccess=()=>{const record=request.result;if(record){record.serverArchiveId=archiveId||null;store.put(record,"active");}};request.onerror=()=>reject(request.error||Error("保存音源情報を読み込めません。"));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("登録情報の保存に失敗しました。"));tx.onabort=()=>reject(tx.error||Error("登録情報の保存が中断されました。"));});}
+ finally{db.close();}
+}
+async function getSavedServerArchiveId(){
+ const record=await getVoicebankArchive();
+ return record&&typeof record.serverArchiveId==="string"?record.serverArchiveId:null;
+}
+async function getVoicebankArchive(){
+ const db=await openVoicebankDB();
+ try{return await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readonly"),request=tx.objectStore(VOICEBANK_STORE).get("active");request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error||Error("保存音源を読み込めません。"));});}
+ finally{db.close();}
+}
+async function deleteVoicebankArchive(){
+ const db=await openVoicebankDB();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(VOICEBANK_STORE,"readwrite");tx.objectStore(VOICEBANK_STORE).delete("active");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error("保存音源を削除できません。"));});}
+ finally{db.close();}
+}
 const norm=s=>String(s||"").replace(/\\/g,"/").replace(/^\/+/,"");
 function parseOto(text,prefix){
  const rows=[],lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
@@ -22,7 +59,7 @@ async function inflateRaw(bytes){
  catch(e){throw Error("ZIPの圧縮方式を展開できません。通常のZIP形式か確認してください。");}
 }
 async function readZip(blob){
- if(blob.size>MAX_ARCHIVE)throw Error("ZIPは1GB以下のものを選択してください。");
+ if(blob.size>MAX_ARCHIVE)throw Error("ZIPは800MB以下のものを選択してください。");
  const tail=await blob.slice(Math.max(0,blob.size-65557)).arrayBuffer(),v=new DataView(tail);let end=-1;
  for(let i=tail.byteLength-22;i>=0;i--)if(v.getUint32(i,true)===0x06054b50){end=i;break;}
  if(end<0)throw Error("ZIPの目次が見つかりません。破損または非対応形式の可能性があります。");
@@ -38,7 +75,7 @@ async function readZip(blob){
    if(name.split("/").some(x=>x===".."||x==="."))throw Error("不正なファイルパスを含むZIPです。");
    if(flags&1)throw Error("暗号化ZIPには対応していません。");
    if(method!==0&&method!==8)throw Error("未対応の圧縮方式を含んでいます。");
-   total+=usize;if(total>2*1024*1024*1024)throw Error("展開後の合計サイズが2GBを超えます。");
+   total+=usize;if(total>1024*1024*1024)throw Error("展開後の合計サイズが1GBを超えます。");
    entries.set(name,{name,method,csize,usize,local});
   }
   p+=46+nl+el+cl;
@@ -70,7 +107,7 @@ async function preview(path,button){
   if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=URL.createObjectURL(blob);const audio=$("vbAudio");audio.src=state.audioUrl;audio.classList.remove("hidden");await audio.play();button.textContent="▶ 再試聴";
  }catch(e){$("vbStatus").textContent="試聴エラー: "+e.message;button.textContent="▶ 試聴";}finally{button.disabled=false;}
 }
-async function loadFiles(files,mode){
+async function loadFiles(files,mode,options={}){
  stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;$("vbStatus").textContent="音源を調べています…";$("vbRows").replaceChildren();
  const list=Array.from(files||[]);if(!list.length)throw Error("ファイルが選択されていません。");
  if(mode==="zip"){
@@ -91,10 +128,28 @@ async function loadFiles(files,mode){
  if(!state.rows.length)throw Error("oto.iniは見つかりましたが、有効な設定行がありません。");
  const missing=state.rows.filter(r=>!state.files.has(r.file)&&!state.entries.has(r.file)).length;render();
  $("vbStatus").textContent="読み込み完了！ oto.ini "+state.rows.length+"件 / WAV "+(state.files.size+[...state.entries.keys()].filter(x=>x.toLowerCase().endsWith(".wav")).length)+"件 / WAV欠損参照 "+missing+"件。音源データは端末内で処理され、サーバーには送信されません。";
+ if(mode==="zip"&&options.persist!==false){
+  $("vbStatus").textContent+="\n端末内ストレージへ音源ZIPを保存しています…";
+  try{await saveVoicebankArchive(list[0]);$("vbStatus").textContent+="\n端末内保存完了。次回起動時に自動復元します。";}
+  catch(error){$("vbStatus").textContent+="\n端末内保存は未完了（"+error.message+"）。この画面を閉じると再読み込みが必要です。";}
+ }
 }
 $("vbZip").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"zip");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
 $("vbFolder").addEventListener("change",async e=>{try{await loadFiles(e.target.files,"folder");}catch(err){$("vbStatus").textContent="読み込みエラー: "+err.message;}e.target.value="";});
-$("vbClear").addEventListener("click",()=>{stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");$("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";$("vbStatus").textContent="読み込みデータを消去しました。";});
+$("vbClear").addEventListener("click",async()=>{
+ $("vbClear").disabled=true;
+ $("vbStatus").textContent="端末内の保存音源を削除しています…";
+ try{
+  await deleteVoicebankArchive();
+  stopSinging();decodedCache.clear();state.entries.clear();state.files.clear();state.rows=[];state.prefixMap.clear();state.archive=null;
+  if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);
+  state.audioUrl=null;$("vbAudio").removeAttribute("src");$("vbAudio").classList.add("hidden");
+  $("vbRows").replaceChildren();$("vbSummary").textContent="音源はまだ読み込まれていません。";
+  $("vbStatus").textContent="端末内保存データを削除しました。";
+ }catch(error){
+  $("vbStatus").textContent="端末内保存データの削除に失敗しました: "+error.message;
+ }finally{$("vbClear").disabled=false;}
+});
 
 const decodedCache=new Map();let synthContext=null,synthSources=[];
 function noteHz(p){const m=String(p||"").trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return 0;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==="#"?1:m[2]==="B"?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12);}
@@ -117,7 +172,7 @@ function vowelOf(s){
 }
 function aliasKey(s){
  return String(s||"").normalize("NFC").trim().toLowerCase()
-  .replaceAll("\\t"," ").replaceAll("\\r"," ").replaceAll("\\n"," ")
+  .replaceAll("\t"," ").replaceAll("\r"," ").replaceAll("\n"," ")
   .split(" ").filter(Boolean).join(" ");
 }
 function pitchNumber(p){
@@ -216,6 +271,16 @@ async function playNotes(notes,options={}){
  return {scheduled:plans.length,aliases:plans.map(p=>p.row.alias)};
 }
 function stopSinging(){synthSources.forEach(s=>{try{s.stop()}catch(_){}});synthSources=[];}
-window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,playNotes,stop:stopSinging,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size})};
+window.VoiceBankStudioVoicebank={isReady:()=>state.rows.length>0,getArchiveFile:()=>state.archive,getAliases:()=>state.rows.map(row=>row.alias),playNotes,stop:stopSinging,setSavedServerArchiveId:updateSavedServerArchiveId,getSavedServerArchiveId,getStatus:()=>({otoEntries:state.rows.length,prefixMapEntries:state.prefixMap.size,zipLoaded:!!state.archive})};
+(async()=>{
+ try{
+  const saved=await getVoicebankArchive();if(!saved||!saved.blob||!saved.blob.size)return;
+  if(state.rows.length)return;
+  $("vbStatus").textContent="端末内に保存されたUTAU音源を復元しています…";
+  const file=new File([saved.blob],saved.name||"saved-voicebank.zip",{type:saved.type||"application/zip",lastModified:saved.lastModified||0});
+  await loadFiles([file],"zip",{persist:false});
+  $("vbStatus").textContent+="\n保存済み音源を復元しました。再アップロードは不要です。";
+ }catch(error){$("vbStatus").textContent="保存済み音源の自動復元に失敗しました: "+error.message+"。必要ならZIPを再選択してください。";}
+})();
 
 })();

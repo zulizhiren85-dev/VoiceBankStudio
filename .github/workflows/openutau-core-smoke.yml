@@ -1,0 +1,343 @@
+name: OpenUtau Core Smoke Test
+
+on:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
+    paths:
+      - "engine-dotnet/**"
+      - ".github/workflows/openutau-core-smoke.yml"
+  pull_request:
+    paths:
+      - "engine-dotnet/**"
+      - ".github/workflows/openutau-core-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  linux-core-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Fetch pinned OpenUtau source
+        env:
+          OPENUTAU_COMMIT: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e"
+        run: |
+          git clone https://github.com/openutau/OpenUtau.git "$RUNNER_TEMP/OpenUtau"
+          git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
+          test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+          cp engine-dotnet/OpenUtau.Directory.Build.targets "$RUNNER_TEMP/OpenUtau/Directory.Build.targets"
+
+
+      - name: Build HTTP engine service
+        run: |
+          dotnet build engine-dotnet/service/VoiceBankStudio.Service.csproj \
+            --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
+
+
+      - name: Start HTTP service and verify endpoints
+        env:
+          ASPNETCORE_URLS: "http://127.0.0.1:5088"
+        run: |
+          dotnet run --project engine-dotnet/service/VoiceBankStudio.Service.csproj \
+            --no-build --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau" > /tmp/vbs-engine.log 2>&1 &
+          service_pid=$!
+          echo "$service_pid" > /tmp/vbs-engine.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5088/health; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1:5088/api/v1/engine/status | tee /tmp/vbs-engine-status.json
+          grep -q '"phonemizersReady":true' /tmp/vbs-engine-status.json
+
+
+      - name: Create synthetic UTAU voicebank fixture
+        run: |
+          python3 - <<'PY'
+          import math, os, struct, wave
+          root = "/tmp/vbs-fixture/Voicebank"
+          os.makedirs(root, exist_ok=True)
+          with open(os.path.join(root, "character.txt"), "w", encoding="ascii") as f:
+              f.write("name=VoiceBankStudio CI Fixture\n")
+          with open(os.path.join(root, "oto.ini"), "w", encoding="cp932") as f:
+              f.write("a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\na.wav=a k,0,100,0,0,0\na.wav=か,0,100,0,0,0\na.wav=- か,0,100,0,0,0\na.wav=low_あ,0,100,0,0,0\na.wav=high_あ,0,100,0,0,0\n")
+          with open(os.path.join(root, "prefix.map"), "w", encoding="ascii") as f:
+              f.write("C4\tlow_\t\nC5\thigh_\t\n")
+          with wave.open(os.path.join(root, "a.wav"), "wb") as wav:
+              wav.setnchannels(1)
+              wav.setsampwidth(2)
+              wav.setframerate(22050)
+              frames = [int(5000 * math.sin(2 * math.pi * 220 * i / 22050)) for i in range(4410)]
+              wav.writeframes(b"".join(struct.pack("<h", sample) for sample in frames))
+          PY
+          cd /tmp/vbs-fixture
+          zip -qr /tmp/vbs-testbank.zip Voicebank
+
+      - name: Verify OpenUtau singer loading and VCV phonemizing
+        run: |
+          curl --fail --silent \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            http://127.0.0.1:5088/api/v1/voicebanks/inspect \
+            > /tmp/vbs-voicebank-result.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/vbs-voicebank-result.json", encoding="utf-8") as f:
+              result = json.load(f)
+          assert result["loaded"] is True, result
+          assert result["otoCount"] == 7, result
+          assert result["phonemizerTests"]["vcv"] == ["a か"], result
+          assert result["phonemizerTests"]["cv"] == ["- か"], result
+          assert result["phonemizerTests"]["cvvc"] == ["low_あ", "a k"], result
+          assert result["prefixMapTests"] == {"c4": "low_あ", "c5": "high_あ"}, result
+          pitch_map = {entry["tone"]: entry for entry in result["pitchMap"]}
+          assert pitch_map[60]["alias"] == "low_あ", pitch_map[60]
+          # The fixture maps only C4 and C5; unmapped B4 must use OpenUtau fallback.
+          assert pitch_map[71]["alias"] == "あ", pitch_map[71]
+          assert pitch_map[72]["alias"] == "high_あ", pitch_map[72]
+          # The fixture maps C5 only; C6 is outside that subbank and falls back.
+          assert pitch_map[84]["alias"] == "あ", pitch_map[84]
+          assert pitch_map[60]["file"] == "a.wav", pitch_map[60]
+          print("OpenUtau voicebank + VCV + pitch-aware prefix.map source selection: OK")
+          PY
+
+
+      - name: Reject ZIP path traversal
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("/tmp/vbs-malicious.zip", "w") as z:
+              z.writestr("../outside.txt", "must not be extracted")
+          PY
+          status=$(curl --silent --output /tmp/vbs-malicious-result.json --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-malicious.zip" \
+            http://127.0.0.1:5088/api/v1/voicebanks/inspect)
+          test "$status" = "400"
+          test ! -e /tmp/outside.txt
+
+
+      - name: Render a real WAV through OpenUtau Worldline-R
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-render-response.bin
+            exit 1
+          fi
+          mv /tmp/vbs-render-response.bin /tmp/vbs-render.wav
+          python3 - <<'PY'
+          import os, struct
+          path = "/tmp/vbs-render.wav"
+          data = open(path, "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV file"
+          assert data[12:16] == b"fmt " and data[36:40] == b"data", "invalid WAV chunks"
+          assert len(data) > 44, "empty WAV"
+          pcm = data[44:]
+          assert len(pcm) % 2 == 0, "invalid PCM16 length"
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"OpenUtau Worldline-R rendered {len(samples)} non-empty PCM16 samples")
+          PY
+
+
+      - name: Verify registered voicebank extraction cache reuse
+        run: |
+          mkdir -p /tmp/voicebankstudio-bank-cache/orphan.extracted
+          touch /tmp/voicebankstudio-bank-cache/orphan.zip
+          curl --fail --silent \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            http://127.0.0.1:5088/api/v1/voicebanks/register \
+            > /tmp/vbs-register-result.json
+          test ! -e /tmp/voicebankstudio-bank-cache/orphan.zip
+          test ! -e /tmp/voicebankstudio-bank-cache/orphan.extracted
+          archive_id=$(python3 -c 'import json; print(json.load(open("/tmp/vbs-register-result.json"))["archiveId"])')
+          python3 - "$archive_id" <<'PYID'
+          import re, sys
+          assert re.fullmatch(r"[0-9a-f]{64}", sys.argv[1]), "archive ID must be 256-bit lowercase hex"
+          PYID
+          for attempt in 1 2; do
+            status=$(curl --silent --show-error --write-out "%{http_code}" \
+              --form-string "archiveId=$archive_id" \
+              --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
+              -F "bpm=120" \
+              -F "phonemizer=ja-vcv" \
+              http://127.0.0.1:5088/api/v1/render \
+              --output "/tmp/vbs-cached-render-$attempt.wav")
+            if [ "$status" != "200" ]; then
+              cat "/tmp/vbs-cached-render-$attempt.wav"
+              exit 1
+            fi
+            python3 -c 'import sys; d=open(sys.argv[1],"rb").read(); assert d[:4]==b"RIFF" and len(d)>44' "/tmp/vbs-cached-render-$attempt.wav"
+          done
+          grep -q "Using cached extracted voicebank" /tmp/vbs-engine.log
+          test -d "/tmp/voicebankstudio-bank-cache/$archive_id.extracted"
+          test ! -e "/tmp/voicebankstudio-bank-cache/$archive_id.zip"
+          echo "Registered archive rendered twice; ID remained valid, extracted bank was reused, and redundant ZIP storage was removed."
+
+      - name: Verify three-phrase VCV rendering across rests
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480},{"lyric":"あ","tone":60,"position":3840,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-rest-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-rest-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-rest-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          pcm = data[44:]
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert len(samples) > 100000, f"rest was not preserved: {len(samples)} samples"
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"Multi-phrase VCV render preserved song timeline: {len(samples)} samples")
+          PY
+          grep -q "PhraseCount=3, Parallelism=1" /tmp/vbs-engine.log
+          echo "Three independent short phrases were rendered sequentially to reduce peak memory."
+
+      - name: Verify two-note CVVC rendering
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":480,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-cvvc" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-cvvc-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-cvvc-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-cvvc-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          pcm = data[44:]
+          samples = struct.unpack("<" + "h" * (len(pcm) // 2), pcm)
+          assert len(samples) > 40000, f"unexpected CVVC render length: {len(samples)}"
+          assert any(sample != 0 for sample in samples), "rendered WAV is silent"
+          print(f"Two-note CVVC render succeeded: {len(samples)} samples")
+          PY
+
+
+      - name: Verify prefix.map high-pitch rendering
+        run: |
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":72,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5088/api/v1/render \
+            --output /tmp/vbs-high-pitch-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-high-pitch-render-response.bin
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-high-pitch-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "not a WAV"
+          samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
+          assert len(samples) > 20000 and any(sample != 0 for sample in samples), "high-pitch render failed"
+          # The source fixture is 220 Hz (A3); a C5 target must be rendered near 523.25 Hz.
+          # Estimate F0 with normalized autocorrelation after the initial consonant/attack area.
+          signal = [sample / 32768.0 for sample in samples[2205:6615]]
+          correlations = {}
+          for lag in range(70, 100):
+              correlations[lag] = sum(signal[i] * signal[i + lag] for i in range(len(signal) - lag))
+          best_lag = max(correlations, key=correlations.get)
+          estimated_f0 = 44100 / best_lag
+          assert 490 <= estimated_f0 <= 560, f"Worldline-R pitch conversion incorrect: {estimated_f0:.1f} Hz"
+          print(f"OpenUtau prefix.map + Worldline-R pitch conversion: {estimated_f0:.1f} Hz (target C5)")
+          PY
+
+      - name: Build and run Core/Builtin smoke test
+        run: |
+          dotnet run --project engine-dotnet/VoiceBankStudio.Engine.csproj \
+            --configuration Release \
+            -p:OpenUtauSourcePath="$RUNNER_TEMP/OpenUtau"
+
+      - name: Build deployable engine container
+        run: docker build --file engine-dotnet/service/Dockerfile --tag voicebankstudio-engine:ci .
+
+
+      - name: Run Docker engine under a 512 MiB memory limit
+        run: |
+          docker run --detach --name vbs-engine-ci --memory=512m --publish 5089:10000 voicebankstudio-engine:ci
+          trap 'docker rm --force vbs-engine-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5089/health; then
+              break
+            fi
+            sleep 2
+          done
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5089/api/v1/render \
+            --output /tmp/vbs-docker-render-response.bin)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-docker-render-response.bin
+            docker logs vbs-engine-ci
+            exit 1
+          fi
+          python3 - <<'PY'
+          data = open("/tmp/vbs-docker-render-response.bin", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "Docker engine did not return WAV"
+          assert len(data) > 44 and any(data[44:]), "Docker engine WAV is empty or silent"
+          print(f"Docker engine rendered a WAV under 512 MiB: {len(data)} bytes")
+          PY
+          status=$(curl --silent --show-error --write-out "%{http_code}" \
+            -F "archive=@/tmp/vbs-testbank.zip" \
+            --form-string 'notesJson=[{"lyric":"あ","tone":60,"position":0,"duration":480},{"lyric":"か","tone":60,"position":1920,"duration":480},{"lyric":"あ","tone":60,"position":3840,"duration":480}]' \
+            -F "bpm=120" \
+            -F "phonemizer=ja-vcv" \
+            http://127.0.0.1:5089/api/v1/render \
+            --output /tmp/vbs-docker-sequential-render.wav)
+          if [ "$status" != "200" ]; then
+            cat /tmp/vbs-docker-sequential-render.wav
+            docker logs vbs-engine-ci
+            exit 1
+          fi
+          python3 - <<'PY'
+          import struct
+          data = open("/tmp/vbs-docker-sequential-render.wav", "rb").read()
+          assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", "sequential Docker render did not return WAV"
+          samples = struct.unpack("<" + "h" * ((len(data) - 44) // 2), data[44:])
+          assert len(samples) > 100000 and any(samples), "parallel Docker render was empty or silent"
+          print(f"Three-phrase render succeeded under 512 MiB: {len(samples)} samples")
+          PY
+          docker logs vbs-engine-ci 2>&1 | grep -q "PhraseCount=3, Parallelism=1"
+          test "$(docker inspect --format '{{.State.OOMKilled}}' vbs-engine-ci)" = "false"
+          echo "Sequential three-phrase rendering stayed alive under the 512 MiB container limit."
+
+      - name: Stop HTTP engine service
+        if: always()
+        run: |
+          if [ -f /tmp/vbs-engine.pid ]; then
+            kill "$(cat /tmp/vbs-engine.pid)" 2>/dev/null || true
+          fi
+
+      - name: Show engine logs on failure
+        if: failure()
+        run: cat /tmp/vbs-engine.log || true

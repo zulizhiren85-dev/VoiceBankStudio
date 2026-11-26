@@ -1,0 +1,8 @@
+.git
+.github
+.cache
+**/bin
+**/obj
+**/.vs
+**/node_modules
+**/__pycache__

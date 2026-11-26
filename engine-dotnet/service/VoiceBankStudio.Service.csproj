@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">linux-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OpenUtauSourcePath Condition="'$(OpenUtauSourcePath)' == ''">../../.cache/OpenUtau</OpenUtauSourcePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(OpenUtauSourcePath)/runtimes/linux-x64/native/libworldline.so"
+          Link="libworldline.so"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(OpenUtauSourcePath)/OpenUtau.Plugin.Builtin/OpenUtau.Plugin.Builtin.csproj" />
+  </ItemGroup>
+</Project>

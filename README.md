@@ -1,49 +1,52 @@
 # VoiceBankStudio
 
-An iPad-focused UTAU voicebank and singing-production app.
+**VoiceBankStudio is an iPad-first, all-in-one UTAU music-production environment.**
 
-## Development direction
+## 根本目的 / Core purpose
 
-The project is moving toward a Python-first application core with a native C audio-processing module. The existing SwiftUI source and GitHub Pages prototype are being preserved while the new engine is built and validated.
+The highest-priority goal is to let a user create a complete song on an iPad, from the first note to the finished audio, using UTAU voicebanks—without needing to switch to a separate desktop DAW for basic music production.
 
-- **Python:** application logic, project data, WAV handling, and analysis orchestration.
-- **C:** performance-sensitive PCM processing and signal analysis.
-- **iPad integration:** package the Python runtime and compile the C module for iOS after the engine has a reliable test foundation.
+This purpose takes priority over individual features, implementation convenience, or short-term milestones. Every feature should contribute to a connected end-to-end music-making workflow.
 
-The GitHub Pages version is a browser prototype. It does not execute the native Python/C engine.
+The product has three integrated pillars:
 
-## Current Python/C engine milestone
+1. **曲作成 (Song creation):** editable piano roll, melody and lyrics, UTAU singing, accompaniment and multiple tracks, mixer, project save/reopen, and WAV export.
+2. **音声解析 (Audio analysis):** analyze audio, pitch, melody, rhythm, timing, pronunciation, and quality; provide useful, editable findings that support creation and improvement.
+3. **音源制作 (Voicebank creation):** recording/import, oto.ini and alias configuration, sample analysis, voicebank construction, and export.
 
-The engine/ directory currently contains:
+These are not separate apps. They must work together as one production environment: analyzed material should help create songs and voicebanks, and created voicebanks should be usable directly in the song editor.
 
-- WAV PCM inspection for 8/16/24/32-bit integer samples.
-- Duration, sample rate, channel count, peak, and RMS measurement.
-- A rough single-pitch estimate from up to the first second.
-- A pure-Python fallback when the C extension is not compiled.
-- Automated tests and a GitHub Actions build/test workflow.
+## UTAU compatibility goal
 
-This is an early engine foundation, not yet a finished iPad app. The pitch estimate is not melody transcription; chord analysis, vocal separation, UTAU synthesis, and the iPad interface integration remain future work.
+The long-term singing-engine goal is broad compatibility with UTAU voicebank types and OpenUtau-supported phonemizer behavior—not VCV-only support. This includes CV, VCV, CVVC and relevant variants, multi-pitch banks, oto.ini, prefix.map, phoneme timing, consonant velocity, preutterance, overlap, and pitch/control data where supported by the upstream engine.
 
-## Project principles
+Use OpenUtau Core and its existing phonemizers/rendering behavior as the primary implementation reference and porting foundation. Preserve upstream behavior wherever practical; replace only platform-specific boundaries needed for iPad Safari/browser execution. Do not claim a voicebank type is supported until it has passed real browser-side tests.
 
-- Local-first: source audio and projects stay on the device.
-- No audio uploads by default.
-- Network features are optional and Wi-Fi-only.
-- Preserve original audio; analysis is provisional and editable.
-- Keep processing bounded and suitable for iPad memory and battery limits.
-- Beginner-friendly controls first, advanced controls later.
+## Current development direction
 
-## Existing source
+The current active work is the **song-creation pillar**, with an iPad Safari/browser implementation and an OpenUtau-based singing engine port. A Worldline WebAssembly proof of concept has successfully run F0 analysis and WORLD analysis/synthesis in the browser test path. This is a DSP milestone only; it does not yet prove complete local UTAU voicebank singing in Safari.
 
-- Sources/VoiceBankStudio/ — existing SwiftUI app source, preserved for later iPad integration.
-- engine/ — Python package and C audio-processing module.
-- docs/ — architecture and development roadmap.
-- index.html — earlier GitHub Pages browser prototype.
+The existing server-side OpenUtau engine remains a fallback and a behavioral reference while local browser rendering is developed. Keep the fallback working.
 
-## Next milestones
+## Development principles
 
-1. Validate the Python/C WAV engine in CI.
-2. Add reliable file import and project metadata.
-3. Expand pitch and tempo analysis in short, resumable chunks.
-4. Design the iPad runtime integration.
-5. Continue with editable notes/lyrics, voicebank assignment, synthesis, and mixing.
+- iPad-first and beginner-friendly, with advanced controls available when needed.
+- Local-first processing where practical; make device-side singing a core goal.
+- Preserve original voicebank files and project data; edits and analysis findings should be reversible.
+- Prefer upstream OpenUtau compatibility over ad hoc simplified implementations.
+- Validate each meaningful feature with automated tests and real voicebank/browser tests.
+- Do not mark a feature complete based only on a successful synthetic fixture or DSP-only test.
+- Keep the three pillars integrated and always prioritize the complete-song-making purpose.
+
+## Repository areas
+
+- `index.html` and browser assets — Safari/browser application.
+- `voicebank.js` — voicebank import, metadata and browser-side voicebank handling.
+- `engine-dotnet/` — headless OpenUtau-based singing engine and service.
+- `assets/worldline/` and `scripts/` — Worldline WASM proof-of-concept assets and tests.
+- `docs/` — architecture, feasibility notes and development plans.
+- `Sources/` and `engine/` — earlier native/Python/C foundations retained for reference and future integration.
+
+## Immediate milestone
+
+Finish and validate the song-creation workflow first: verify real voicebank singing, improve stability and quality, then complete the editor, tracks, mixing, project persistence and export. After that, advance the analysis and voicebank-creation pillars while keeping all three connected to the core purpose above.

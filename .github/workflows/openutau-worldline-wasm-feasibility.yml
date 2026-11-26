@@ -1,0 +1,195 @@
+name: OpenUtau Worldline WASM Feasibility
+
+on:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
+    paths:
+      - ".github/workflows/openutau-worldline-wasm-feasibility.yml"
+      - "docs/IPAD_OPENUTAU_PORT.md"
+      - "scripts/openutau-worldline-wasm-smoke.cpp"
+      - "scripts/worldline-wasm-api.cpp"
+      - "scripts/run-worldline-wasm-api.cjs"
+      - "scripts/run-worldline-wasm-smoke.cjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  OPENUTAU_COMMIT: "08222cb7c48c4ab47faa34a6efc34e2c00898a1e"
+  BAZELISK_VERSION: "1.25.0"
+
+jobs:
+  inspect-and-build-native-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout VoiceBankStudio
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Fetch exact upstream OpenUtau revision
+        run: |
+          git clone --filter=blob:none https://github.com/openutau/OpenUtau.git "$RUNNER_TEMP/OpenUtau"
+          git -C "$RUNNER_TEMP/OpenUtau" checkout "$OPENUTAU_COMMIT"
+          test "$(git -C "$RUNNER_TEMP/OpenUtau" rev-parse HEAD)" = "$OPENUTAU_COMMIT"
+
+      - name: Install pinned Bazelisk
+        run: |
+          curl --fail --location --retry 3 \
+            "https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/bazelisk-linux-amd64" \
+            --output "$RUNNER_TEMP/bazelisk"
+          chmod +x "$RUNNER_TEMP/bazelisk"
+          sudo install "$RUNNER_TEMP/bazelisk" /usr/local/bin/bazel
+          bazel --version
+
+      - name: Record compiler and upstream build metadata
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          mkdir -p "$RUNNER_TEMP/worldline-probe"
+          {
+            echo "OpenUtau commit: $OPENUTAU_COMMIT"
+            echo
+            echo "Bazel version:"
+            bazel --version
+            echo
+            echo "Emscripten toolchain:"
+            echo "Pinned emsdk Bazel module 4.0.6 (installed in the WASM build step)"
+            echo
+            echo "Pinned Bazel version:"
+            cat .bazelversion
+            echo
+            echo "Worldline target definition:"
+            cat worldline/BUILD.bazel
+          } | tee "$RUNNER_TEMP/worldline-probe/toolchain-and-target.txt"
+
+      - name: Build upstream native Worldline reference
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          bazel build //worldline
+
+      - name: Capture Worldline dependency graph
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          bazel query 'deps(//worldline)' --output=label_kind \
+            | sort > "$RUNNER_TEMP/worldline-probe/worldline-dependencies.txt"
+          bazel cquery //worldline --output=files \
+            > "$RUNNER_TEMP/worldline-probe/native-output-files.txt"
+
+      - name: Prepare pinned Emscripten Bazel target
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          set -euo pipefail
+          cat >> WORKSPACE.bazel <<'EOF'
+
+          # Isolated Emscripten toolchain; the upstream OpenUtau checkout remains pinned.
+          load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+          git_repository(
+              name = "emsdk",
+              remote = "https://github.com/emscripten-core/emsdk.git",
+              commit = "24fc909c0da13ef641d5ae75e89b5a97f25e37aa",
+              strip_prefix = "bazel",
+          )
+          load("@emsdk//:deps.bzl", emsdk_deps = "deps")
+          emsdk_deps()
+          load("@emsdk//:emscripten_deps.bzl", emsdk_emscripten_deps = "emscripten_deps")
+          emsdk_emscripten_deps(emscripten_version = "4.0.6")
+          load("@emsdk//:toolchains.bzl", "register_emscripten_toolchains")
+          register_emscripten_toolchains()
+          EOF
+          cp "$GITHUB_WORKSPACE/scripts/openutau-worldline-wasm-smoke.cpp" worldline/worldline_wasm_smoke.cpp
+          cp "$GITHUB_WORKSPACE/scripts/worldline-wasm-api.cpp" worldline/worldline_wasm_api.cpp
+          sed -i '1i load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")' worldline/BUILD.bazel
+          cat >> worldline/BUILD.bazel <<'EOF'
+
+          # Experimental browser target: link the synthesis library only.
+          # Deliberately omit audio_output_lib / miniaudio device access.
+          cc_binary(
+              name = "worldline_wasm_smoke_binary",
+              srcs = ["worldline_wasm_smoke.cpp"],
+              deps = [":worldline_lib"],
+              linkopts = [
+                  "-sALLOW_MEMORY_GROWTH=1",
+                  "-sENVIRONMENT=web,worker,node",
+                  "-sMODULARIZE=1",
+                  "-sEXPORT_NAME=WorldlineModule",
+                  "-sEXPORTED_FUNCTIONS=['_main','_malloc','_free','_F0FrameCount','_F0','_DecodeMgc','_DecodeBap','_InitAnalysisConfig','_WorldAnalysisF0In','_WorldSynthesisSampleCount','_WorldSynthesis','_HnAnalysisF0In','_WorldSynthesisContinuousNoise']",
+                  "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']",
+                  "-sWASM_BIGINT=1",
+              ],
+          )
+
+          wasm_cc_binary(
+              name = "worldline-wasm-smoke",
+              cc_target = ":worldline_wasm_smoke_binary",
+          )
+
+          # Production-oriented C ABI primitive, separate from the smoke-test main.
+          cc_binary(
+              name = "worldline_wasm_api_binary",
+              srcs = ["worldline_wasm_api.cpp"],
+              deps = [":worldline_lib"],
+              linkopts = [
+                  "--no-entry",
+                  "-sALLOW_MEMORY_GROWTH=1",
+                  "-sENVIRONMENT=web,worker,node",
+                  "-sMODULARIZE=1",
+                  "-sEXPORT_NAME=WorldlineApiModule",
+                  "-sEXPORTED_FUNCTIONS=['_malloc','_free','_vbs_worldline_output_capacity','_vbs_worldline_render_pitch_shift']",
+                  "-sEXPORTED_RUNTIME_METHODS=['cwrap']",
+              ],
+          )
+
+          wasm_cc_binary(
+              name = "worldline-wasm-api",
+              cc_target = ":worldline_wasm_api_binary",
+          )
+          EOF
+
+      - name: Build upstream Worldline as WebAssembly
+        working-directory: ${{ runner.temp }}/OpenUtau/cpp
+        run: |
+          set -euo pipefail
+          USE_BAZEL_VERSION=7.4.1 bazel --version
+          USE_BAZEL_VERSION=7.4.1 bazel build --noenable_bzlmod --incompatible_enable_cc_toolchain_resolution //worldline:worldline-wasm-smoke
+          USE_BAZEL_VERSION=7.4.1 bazel build --noenable_bzlmod --incompatible_enable_cc_toolchain_resolution //worldline:worldline-wasm-api
+          find bazel-bin/worldline -maxdepth 2 -type f -print | sort
+          WASM_DIR="bazel-bin/worldline/worldline-wasm-smoke"
+          WASM_JS="$WASM_DIR/worldline_wasm_smoke_binary.js"
+          test -f "$WASM_JS"
+          node "$GITHUB_WORKSPACE/scripts/run-worldline-wasm-smoke.cjs" "$WASM_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          API_DIR="bazel-bin/worldline/worldline-wasm-api"
+          API_JS="$API_DIR/worldline_wasm_api_binary.js"
+          test -f "$API_JS"
+          node "$GITHUB_WORKSPACE/scripts/run-worldline-wasm-api.cjs" "$API_JS" | tee "$RUNNER_TEMP/worldline-probe/wasm-api-output.txt"
+          grep -q "WORLDLINE_WASM_API_OK" "$RUNNER_TEMP/worldline-probe/wasm-api-output.txt"
+          grep -q "WORLDLINE_WASM_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          grep -q "WORLDLINE_WASM_NODE_SMOKE_OK" "$RUNNER_TEMP/worldline-probe/wasm-smoke-output.txt"
+          cp "$WASM_JS" "$RUNNER_TEMP/worldline-probe/"
+          cp "$WASM_DIR/worldline_wasm_smoke_binary.wasm" "$RUNNER_TEMP/worldline-probe/"
+
+      - name: Publish validated Worldline WASM bundle to the feature branch
+        if: success()
+        run: |
+          set -euo pipefail
+          mkdir -p assets/worldline
+          cp "$RUNNER_TEMP/worldline-probe/worldline_wasm_smoke_binary.js" assets/worldline/
+          cp "$RUNNER_TEMP/worldline-probe/worldline_wasm_smoke_binary.wasm" assets/worldline/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/worldline/worldline_wasm_smoke_binary.js assets/worldline/worldline_wasm_smoke_binary.wasm
+          if git diff --cached --quiet; then
+            echo "Worldline WASM bundle is already up to date."
+            exit 0
+          fi
+          git commit -m "build: publish validated Worldline WASM browser bundle"
+          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+
+      - name: Upload feasibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openutau-worldline-feasibility
+          path: ${{ runner.temp }}/worldline-probe/
+          if-no-files-found: warn

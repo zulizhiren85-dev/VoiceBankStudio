@@ -1,9 +1,12 @@
 services:
   - type: web
-    name: voicebankstudio-analysis-zulizhiren85
-    runtime: python
+    name: voicebankstudio-openutau-engine
+    runtime: docker
     plan: free
-    buildCommand: pip install -r server/requirements.txt && pip install ./engine
-    startCommand: uvicorn server.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./engine-dotnet/service/Dockerfile
+    dockerContext: .
     healthCheckPath: /health
     autoDeploy: true
+    envVars:
+      - key: VOICEBANKSTUDIO_ALLOWED_ORIGINS
+        value: https://zulizhiren85-dev.github.io,https://voicebankstudio-preview.onrender.com

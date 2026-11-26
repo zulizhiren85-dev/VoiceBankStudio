@@ -5,9 +5,9 @@
 <meta name="theme-color" content="#182238"><title>VoiceBankStudio | Song Studio</title>
 <style>
 :root{color-scheme:dark;--bg:#101827;--panel:#1b2940;--panel2:#243550;--line:#3a4b66;--text:#f3f6fb;--muted:#aab8cc;--accent:#83d6c4;--warn:#ffd27a}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{padding:18px 16px 12px;background:#182238;border-bottom:1px solid var(--line)}h1{font-size:21px;margin:0 0 4px}header p{margin:0;color:var(--muted);font-size:13px}.wrap{max-width:980px;margin:auto;padding:14px;display:grid;gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}.panel h2{font-size:17px;margin:0 0 12px}.toolbar,.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,.filebtn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:11px 14px;border-radius:10px;font-size:15px;min-height:44px}.filebtn{position:relative;display:inline-flex;align-items:center;overflow:hidden;cursor:pointer}.filebtn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;display:block;cursor:pointer;z-index:2;font-size:100px}button.primary{background:#245d59;border-color:#398d80}button:active{transform:scale(.98)}input,select{background:#101b2b;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:42px;font-size:15px;max-width:100%}label{color:var(--muted);font-size:13px;display:grid;gap:5px} .settings{display:flex;gap:12px;flex-wrap:wrap}.settings label{min-width:110px}.notehead,.note{display:grid;grid-template-columns:1fr 1.3fr .8fr .8fr 44px;gap:7px;align-items:center}.notehead{color:var(--muted);font-size:12px;padding:0 4px 7px}.note{padding:7px 0;border-top:1px solid var(--line)}.note input{width:100%;min-width:0}.note button{padding:5px;min-height:40px}.muted{color:var(--muted);font-size:13px}.status{padding:10px;border-radius:9px;background:#122b32;color:#b8f2e4;font-size:14px;white-space:pre-wrap}.warn{background:#382d1b;color:var(--warn)}.hidden{display:none}audio{width:100%;margin-top:8px}#wave{width:100%;height:84px;background:#101b2b;border-radius:8px;display:block;margin-top:8px}.small{font-size:12px;color:var(--muted)}@media(max-width:520px){.notehead,.note{grid-template-columns:.8fr 1.1fr .7fr .7fr 38px;gap:4px}.note input{padding:8px 5px;font-size:14px}.panel{padding:11px}.wrap{padding:10px}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{padding:18px 16px 12px;background:#182238;border-bottom:1px solid var(--line)}h1{font-size:21px;margin:0 0 4px}header p{margin:0;color:var(--muted);font-size:13px}.wrap{max-width:980px;margin:auto;padding:14px;display:grid;gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}.panel h2{font-size:17px;margin:0 0 12px}.toolbar,.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,.filebtn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:11px 14px;border-radius:10px;font-size:15px;min-height:44px}.filebtn{position:relative;display:inline-flex;align-items:center;overflow:hidden;cursor:pointer}.filebtn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;display:block;cursor:pointer;z-index:2;font-size:100px}button.primary{background:#245d59;border-color:#398d80}button:active{transform:scale(.98)}button:disabled{opacity:.42;filter:saturate(.4);cursor:not-allowed}button.ready{background:#246c58;border-color:#6be0b5;box-shadow:0 0 0 2px rgba(107,224,181,.22);font-weight:700}input,select{background:#101b2b;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:42px;font-size:15px;max-width:100%}label{color:var(--muted);font-size:13px;display:grid;gap:5px} .settings{display:flex;gap:12px;flex-wrap:wrap}.settings label{min-width:110px}.notehead,.note{display:grid;grid-template-columns:1fr 1.3fr .8fr .8fr 44px;gap:7px;align-items:center}.notehead{color:var(--muted);font-size:12px;padding:0 4px 7px}.note{padding:7px 0;border-top:1px solid var(--line)}.note input{width:100%;min-width:0}.note button{padding:5px;min-height:40px}.muted{color:var(--muted);font-size:13px}.status{padding:10px;border-radius:9px;background:#122b32;color:#b8f2e4;font-size:14px;white-space:pre-wrap}.status{border-left:4px solid #45c99a}.status.error{border-left-color:#ff5964;background:#3b2028;color:#ffd7da}.status.warn:not(.error){border-left-color:#ffc45c}.warn{background:#382d1b;color:var(--warn)}.hidden{display:none}audio{width:100%;margin-top:8px}#wave{width:100%;height:84px;background:#101b2b;border-radius:8px;display:block;margin-top:8px}.small{font-size:12px;color:var(--muted)}@media(max-width:520px){.notehead,.note{grid-template-columns:.8fr 1.1fr .7fr .7fr 38px;gap:4px}.note input{padding:8px 5px;font-size:14px}.panel{padding:11px}.wrap{padding:10px}}
 
-.vb-list{display:grid;gap:6px;margin-top:10px;max-height:560px;overflow:auto}.vb-entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:9px;border-top:1px solid var(--line)}.vb-entry strong,.vb-entry small{display:block;overflow-wrap:anywhere}.vb-entry strong{font-size:14px}.vb-entry small{font-size:11px;color:var(--muted);margin-top:3px}.vb-entry button{min-height:38px;padding:7px 10px}.vb-state{font-size:11px;color:var(--muted)}@media(max-width:520px){.vb-entry{grid-template-columns:minmax(0,1fr) auto}.vb-state{grid-column:1;grid-row:2}} .song-editor{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}.song-editor summary{cursor:pointer;color:var(--accent);font-size:14px;padding:8px 2px;user-select:none}.song-editor[open] summary{margin-bottom:10px}.song-editor summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.vb-list{display:grid;gap:2px;margin-top:8px;max-height:300px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:9px;padding:3px}.vb-entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:5px 7px;border-bottom:1px solid var(--line)}.vb-entry:last-child{border-bottom:0}.vb-entry strong,.vb-entry small{display:block;overflow-wrap:anywhere}.vb-entry strong{font-size:12px;line-height:1.25}.vb-entry small{font-size:10px;color:var(--muted);margin-top:1px}.vb-entry button{min-height:30px;padding:4px 8px;font-size:12px}.vb-state{font-size:10px;color:var(--muted)}@media(max-width:520px){.vb-entry{grid-template-columns:minmax(0,1fr) auto;gap:4px;padding:4px 6px}.vb-entry button{min-height:28px;padding:3px 7px}.vb-state{grid-column:1;grid-row:2}} .song-editor{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}.song-editor summary{cursor:pointer;color:var(--accent);font-size:14px;padding:8px 2px;user-select:none}.song-editor[open] summary{margin-bottom:10px}.song-editor summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -17,16 +17,19 @@
 <label>BPM<input id="bpm" type="number" min="40" max="240" value="120"></label>
 <label>拍子<select id="meter"><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option></select></label>
 <label>再生音量<input id="volume" type="number" min="0" max="100" value="35"></label>
-<label>オクターブ<select id="octave"><option value="-2">−2（2オクターブ下）</option><option value="-1">−1（1オクターブ下）</option><option value="0" selected>±0（標準）</option><option value="1">＋1（1オクターブ上）</option><option value="2">＋2（2オクターブ上）</option></select></label>
+<label>キー変更（半音）<select id="keyShift"><option value="-6">−6</option><option value="-5" selected>−5（きらきら星・男性向け目安）</option><option value="-4">−4</option><option value="-3">−3</option><option value="-2">−2</option><option value="-1">−1</option><option value="0">±0（標準）</option><option value="1">＋1</option><option value="2">＋2</option><option value="3">＋3</option><option value="4">＋4</option><option value="5">＋5</option><option value="6">＋6</option></select></label>
+
 </div></section>
 <section class="panel"><h2>① メロディ・歌唱</h2>
-<div class="toolbar"><button id="play">▶ テスト再生</button><button class="primary" id="voicePlay" type="button">UTAU音源で歌う（ベータ）</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
+<div class="toolbar"><button id="play">▶ テスト再生</button><label>発音方式<select id="phonemizer"><option value="ja-vcv">自動判定：日本語 VCV / CV</option><option value="ja-cvvc">自動判定：日本語 CVVC</option></select></label><label style="display:flex;align-items:center;gap:8px;min-height:44px"><input id="confirmVoicePlay" type="checkbox" style="width:20px;height:20px;min-height:20px">歌唱を開始することを確認</label><button class="primary" id="voicePlay" type="button" disabled>UTAU音源で歌う（確認後に有効）</button><span id="voicePlayReadyHint" class="small" role="status" aria-live="polite">歌唱ボタンは確認チェック後に有効になります。</span><button id="playRender" type="button" disabled>▶ 生成した歌声を再生（歌唱後に有効）</button><button id="downloadRender" type="button" disabled>WAVを保存（歌唱後に有効）</button><button id="cancelVoiceRender" type="button" class="hidden" style="background:#762f3a;border-color:#ff7884;font-weight:700">■ 歌唱処理を強制終了</button><button id="stop">■ 停止</button><button id="reset">きらきら星に戻す</button></div>
 <div id="voicePlayStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">再生待機中。UTAU音源を読み込んでから歌唱ボタンを押してください。</div>
+
+
 <details class="song-editor"><summary>歌詞・音符の編集を開く</summary>
 <p class="muted">音程・歌詞・長さを入力。最初から「きらきら星」の日本語メロディが入っています。</p>
 <div class="notehead"><span>音程</span><span>歌詞</span><span>拍数</span><span>開始拍</span><span></span></div><div id="notes"></div>
 <div class="toolbar" style="margin-top:12px"><button class="primary" id="add">＋ 音符を追加</button></div>
-<p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符や重ねた音も作れます。</p>
+<p class="small">音程は C4、D#4、F♯3 など。拍数は 0.25〜8。開始拍を変えると休符を作れます。重ねた音符は現在未対応です。</p>
 </details></section>
 <section class="panel"><h2>② 音源を読み込んで解析する</h2><p class="muted">WAVなどの音声を端末内で簡易解析できます。端末内解析は通信なし。サーバー解析を使う場合のみ、確認後に音源を送信します（100MB以下・10分以内）。</p>
 <div class="toolbar"><label for="audioFile">音源ファイル（複数選択可）</label><input id="audioFile" type="file" multiple accept=".wav,.wave,.mp3,.flac,.m4a,.aac,.aiff,.aif,.ogg,.opus,.wma,audio/*" aria-label="音源ファイルを複数選択" style="display:block;width:100%;min-height:52px;padding:10px"><button id="checkAudio" type="button">選択状態を確認</button><button id="loadAudio" type="button">先頭の音源を読み込む</button><button id="analyze" disabled>端末内で簡易解析（通信なし）</button><button id="serverAnalyze" disabled>サーバー解析（通信あり）</button><button id="serverAnalyzeBatch" type="button" disabled>複数音源をまとめて解析</button></div>
@@ -40,16 +43,64 @@
 <div id="urlStatus" class="status" style="margin-top:10px">URLを入力すると、対応サービスと取り込み手順を案内します。</div>
 <div id="videoPreview" class="hidden" style="margin-top:10px"><div class="small" style="margin-bottom:6px">YouTubeプレビュー（再生はYouTube上で行われます）</div><div style="position:relative;width:100%;aspect-ratio:16/9;background:#101b2b;border-radius:10px;overflow:hidden"><iframe id="youtubeFrame" title="YouTube動画プレビュー" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div><p class="small">動画の音声データはアプリから読み取れません。解析には、利用可能な音源ファイルを上の②から別途読み込んでください。</p></div>
 </section>
+<section class="panel" id="voicebankCreate"><h2>③ 原音作成ベータ 0.1</h2>
+<p class="muted">iPadのマイクで録音、または既存の録音WAVを読み込み、原音ファイルとoto.iniの基本行を作成します。録音データはこの端末内で処理します。現段階は単独音の録音・手動原音設定が中心で、自動oto推定・連続音リスト録音・ZIP一括出力は未実装です。</p>
+<div class="toolbar"><label>エイリアス<input id="vbCreateAlias" type="text" maxlength="80" value="あ" placeholder="例：あ / a か"></label><label>WAVファイル名<input id="vbCreateFilename" type="text" maxlength="100" value="あ.wav"></label></div>
+<div class="toolbar"><button id="vbCreateRecord" type="button">● 録音開始</button><button id="vbCreateStop" type="button" disabled>■ 録音停止</button><label class="filebtn">録音済み音声を読み込む<input id="vbCreateImport" type="file" accept=".wav,.wave,audio/*" class="hidden"></label></div>
+<div id="vbCreateStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">マイク録音または音声ファイルの読み込みを待っています。</div>
+<audio id="vbCreatePreview" controls class="hidden" style="width:100%;margin-top:8px"></audio>
+<div class="settings" style="margin-top:10px">
+<label>オフセット (ms)<input id="vbOtoOffset" type="number" step="0.1" value="0"></label>
+<label>固定範囲・子音部 (ms)<input id="vbOtoConsonant" type="number" step="0.1" value="100"></label>
+<label>右ブランク (ms)<input id="vbOtoCutoff" type="number" step="0.1" value="-100"></label>
+<label>先行発声 (ms)<input id="vbOtoPreutterance" type="number" step="0.1" value="80"></label>
+<label>オーバーラップ (ms)<input id="vbOtoOverlap" type="number" step="0.1" value="30"></label>
+</div>
+<div class="toolbar" style="margin-top:10px"><button id="vbCreateAdd" class="primary" type="button" disabled>原音リストに追加</button><button id="vbCreateDownloadWav" type="button" disabled>WAVを保存</button><button id="vbCreateDownloadOto" type="button" disabled>oto.iniを保存</button></div>
+<div id="vbCreateList" class="status" style="margin-top:8px" aria-live="polite">登録した原音はここに表示されます。</div>
+<p class="small">oto.iniの並びは「ファイル名=エイリアス,オフセット,固定範囲,右ブランク,先行発声,オーバーラップ」です。値はミリ秒。数値は手動調整が必要です。原音リストは現在ページ内だけに一時保持されるため、再読み込み前にWAVとoto.iniを保存してください。OpenUtauで読み込んで発音確認する工程は今後追加します。</p>
+</section>
 <section class="panel"><h2>④ プロジェクト保存・読み込み</h2><div class="toolbar"><button class="primary" id="save">プロジェクトを保存</button><label class="filebtn">プロジェクトを読み込む<input id="load" type="file" accept=".json,application/json" class="hidden"></label></div><p class="small">音符・BPM・拍子をJSON形式で保存します。音声ファイル自体は含みません。</p><div id="msg" class="muted" aria-live="polite"></div></section>
 
 <section class="panel" id="voicebankBeta"><h2>⑤ UTAU音源ベータ 0.1</h2>
-<p class="muted">ZIPまたは音源フォルダを選択。oto.iniを解析し、エイリアス・原音設定を表示してWAVを個別試聴します。音源データは端末内だけで処理し、サーバーへ送信しません。</p>
+<p class="muted">ZIPまたは音源フォルダを選択。oto.iniを解析し、エイリアス・原音設定を表示してWAVを個別試聴します。読み込み・個別試聴は端末内で行います。OpenUtau歌唱の初回だけ800MB以下のZIP音源を歌唱サーバーへ登録します。2回目以降は譜面だけを送信するため、音源ZIPの再送信は不要です。サーバー側の一時登録は最長24時間で期限切れになります（利用中は延長されます）。</p>
 <div class="toolbar"><label class="filebtn">ZIP音源を読み込む<input id="vbZip" type="file" accept=".zip,application/zip" class="hidden"></label><label class="filebtn">音源フォルダを読み込む<input id="vbFolder" type="file" webkitdirectory directory multiple class="hidden"></label><button id="vbClear" type="button">読み込み解除</button></div>
 <div id="vbSummary" class="muted" style="margin-top:10px">音源はまだ読み込まれていません。</div><div id="vbStatus" class="status" style="margin-top:8px">ZIPまたはフォルダを選択してください。</div><audio id="vbAudio" controls class="hidden" style="width:100%;margin-top:8px"></audio><div id="vbRows" class="vb-list"></div>
-<p class="small">ベータ0.5：UTAU互換VCVエイリアス検索（例：a か）を前の音の母音から検索し、oto.iniの先行発声・オーバーラップを使って音をつなぎます。単独音・VCVの基本的な試験再生に対応します。prefix.mapを読み込み、音程に応じて多音階音源を切り替えます。UTAU本体と同等のresamplerや完全な音素連結ではありません。iPadのSafariでフォルダ選択が動作しない場合はZIPを使用してください。</p></section>
+<p class="small">歌唱エンジンはOpenUtau Coreの日本語VCV/CV/CVVC phonemizerとWorldline-Rを使用します。oto.ini・prefix.map・多音階サブバンクはOpenUtau側で読み込みます。現在は単旋律ベータ版で、重ねた音符、ピッチベンド、ビブラート、特殊なresampler設定は未対応です。OpenUtau歌唱にはZIP読み込みが必要です。初回登録後は音源を一時保存して再利用します。フォルダ読み込みは端末内の原音試聴用です。</p></section>
+<section class="panel" id="diagnostics"><details><summary style="cursor:pointer;color:var(--accent);font-size:15px;padding:4px 0">接続テスト・開発者向け診断を開く</summary>
+<p class="muted">普段の曲作りでは使用しません。接続不良や歌唱エンジンの確認が必要なときだけ開いてください。</p>
+<div class="toolbar"><button id="engineStatusCheck" type="button">歌唱サーバー状態を確認</button><button id="inspectVoicebank" type="button">OpenUtauで音源を確認</button><button id="worldlineWasmTest" type="button">端末内Worldline WASMテスト</button></div>
+<div id="engineStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">歌唱サーバーの状態は未確認です。音源ZIPを送る前に接続状態を確認できます。</div>
+<div id="worldlineWasmStatus" class="status" style="margin-top:8px" role="status" aria-live="polite">iPad内でF0解析とWORLD合成を行う基礎テストです。音源ZIPの読み込みは不要です。</div>
+<p class="small">Worldline WASMテストは合成エンジンの端末内動作確認です。UTAU音源の発音・音符処理を含む完全なローカル歌唱とは別のテストです。</p>
+</details></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
+// ステータス文面からエラーを判定し、緑のラインを赤に切り替える。
+const statusErrorPattern=/(エラー|失敗|できませんでした|不正です|不足しています|タイムアウト|通信に失敗|読み込み停止|中断されました)/i;
+function updateStatusTone(node){
+ if(!node||!node.classList.contains('status'))return;
+ node.classList.toggle('error',statusErrorPattern.test(node.textContent||''));
+}
+document.querySelectorAll('.status').forEach(updateStatusTone);
+const statusToneObserver=new MutationObserver(records=>{
+ const changed=new Set();
+ records.forEach(record=>{
+  const target=record.target.nodeType===Node.TEXT_NODE?record.target.parentElement:record.target;
+  const status=target&&target.closest?target.closest('.status'):null;
+  if(status)changed.add(status);
+  record.addedNodes&&record.addedNodes.forEach(n=>{
+   if(n.nodeType===Node.ELEMENT_NODE){
+    if(n.matches&&n.matches('.status'))changed.add(n);
+    n.querySelectorAll&&n.querySelectorAll('.status').forEach(s=>changed.add(s));
+   }
+  });
+ });
+ changed.forEach(updateStatusTone);
+});
+document.querySelectorAll('.status').forEach(node=>statusToneObserver.observe(node,{childList:true,characterData:true,subtree:true}));
+
 const twinkleLines=[
  [['C4','き'],['C4','ら'],['G4','き'],['G4','ら'],['A4','ひ'],['A4','か'],['G4','る']],
  [['F4','お'],['F4','そ'],['E4','ら'],['E4','の'],['D4','ほ'],['D4','し'],['C4','よ']],
@@ -60,23 +111,52 @@ const twinkleLines=[
 ];
 const seed=twinkleLines.flatMap((line,lineIndex)=>line.map(([pitch,lyric],i)=>[pitch,lyric,(i===6?2:1),lineIndex*8+i]));
 let notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]})),nextId=43,ctx=null,active=[],decoded=null,objectURL=null,lastAnalysisFrames=[],lastAnalysisTempo=null;
-function render(){const root=$('notes');root.innerHTML='';notes.sort((a,b)=>a.start-b.start).forEach(n=>{const row=document.createElement('div');row.className='note';[['pitch',n.pitch,'text'],['lyric',n.lyric,'text'],['beats',n.beats,'number'],['start',n.start,'number']].forEach(([key,val,type])=>{const inp=document.createElement('input');inp.type=type;inp.value=val;inp.setAttribute('aria-label',key);if(key==='beats'){inp.min='.25';inp.max='8';inp.step='.25'}if(key==='start'){inp.min='0';inp.step='.25'}inp.addEventListener('change',()=>{n[key]=type==='number'?Number(inp.value):inp.value;if(key==='pitch')inp.value=n.pitch;});row.append(inp)});const del=document.createElement('button');del.textContent='×';del.title='この音符を削除';del.onclick=()=>{notes=notes.filter(x=>x.id!==n.id);render()};row.append(del);root.append(row)})}
+let renderedAudio=null,renderedAudioUrl=null;
+function invalidateRenderedAudio(){if(renderedAudio){renderedAudio.pause();renderedAudio.removeAttribute('src');renderedAudio.load();renderedAudio=null;}if(renderedAudioUrl){URL.revokeObjectURL(renderedAudioUrl);renderedAudioUrl=null;}updateRenderButtons();}
+function render(){invalidateRenderedAudio();const root=$('notes');root.innerHTML='';notes.sort((a,b)=>a.start-b.start).forEach(n=>{const row=document.createElement('div');row.className='note';[['pitch',n.pitch,'text'],['lyric',n.lyric,'text'],['beats',n.beats,'number'],['start',n.start,'number']].forEach(([key,val,type])=>{const inp=document.createElement('input');inp.type=type;inp.value=val;inp.setAttribute('aria-label',key);if(key==='beats'){inp.min='.25';inp.max='8';inp.step='.25'}if(key==='start'){inp.min='0';inp.step='.25'}inp.addEventListener('change',()=>{const previous=n[key],next=type==='number'?Number(inp.value):inp.value;if(type==='number'&&!Number.isFinite(next)){inp.value=previous;return;}if(key==='beats'&&(next<.25||next>8)){inp.value=previous;return;}if(key==='start'&&next<0){inp.value=previous;return;}n[key]=next;invalidateRenderedAudio();if(key==='pitch')inp.value=n.pitch;});row.append(inp)});const del=document.createElement('button');del.textContent='×';del.title='この音符を削除';del.onclick=()=>{notes=notes.filter(x=>x.id!==n.id);render()};row.append(del);root.append(row)})}
 render();
 $('add').onclick=()=>{notes.push({id:nextId++,pitch:'C4',lyric:'あ',beats:1,start:notes.length?Math.max(...notes.map(n=>n.start+n.beats)):0});render()};
+function kanaVowel(ch){
+ const rows={
+  a:'あぁかがさざただなはばぱまゃやらわゎアァカガサザタダナハバパマャヤラワヮヷヵ',
+  i:'いぃきぎしじちぢにひびぴみりゐイィキギシジチヂニヒビピミリヰ',
+  u:'うぅくぐすずつづぬふぶぷむゅゆるウゥクグスズツヅヌフブプムュユル',
+  e:'えぇけげせぜてでねへべぺめれゑエェケゲセゼテデネヘベペメレヱヶ',
+  o:'おぉこごそぞとどのほぼぽもょよろをオォコゴソゾトドノホボポモョヨロヲ'
+ };
+ for(const vowel of Object.keys(rows))if(rows[vowel].includes(ch))return vowel;
+ return null;
+}
+function finalKanaVowel(text){
+ const chars=Array.from(String(text||'').trim());
+ let i=chars.length-1;
+ while(i>=0&&chars[i]==='ー')i--;
+ return i>=0?kanaVowel(chars[i]):null;
+}
+function normalizeLongVowelLyric(lyric,previousLyric=''){
+ let out='';
+ const source=String(lyric||'').trim();
+ for(const ch of Array.from(source)){
+  if(ch==='ー'){
+   const vowel=finalKanaVowel(out)||(!out?finalKanaVowel(previousLyric):null);
+   out+=vowel?({a:'あ',i:'い',u:'う',e:'え',o:'お'}[vowel]):ch;
+  }else out+=ch;
+ }
+ return out;
+}
 function freq(p){const m=p.trim().toUpperCase().match(/^([A-G])([#B]?)(-?\d)$/);if(!m)return null;const sem={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='B'?-1:0);return 440*Math.pow(2,((Number(m[3])+1)*12+sem-69)/12)}
-function octaveRatio(){return Math.pow(2,Math.max(-2,Math.min(2,Number($('octave')?.value)||0)))}
-function stop(){active.forEach(o=>{try{o.stop()}catch(e){}});active=[]}
-$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();};
-$('play').onclick=async()=>{stop();const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext){$('msg').textContent='このブラウザは音声再生に対応していません。';return}ctx=ctx||new AudioContext();await ctx.resume();const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120)),unit=60/bpm,vol=Math.max(0,Math.min(100,Number($('volume').value)||35))/100*.18,now=ctx.currentTime+.08;notes.forEach(n=>{const f=freq(n.pitch);if(!f)return;const osc=ctx.createOscillator(),gain=ctx.createGain(),start=now+Math.max(0,n.start)*unit,dur=Math.max(.08,n.beats*unit);osc.type='triangle';osc.frequency.value=f*octaveRatio();gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(vol,start+.015);gain.gain.setValueAtTime(vol,start+dur*.82);gain.gain.linearRampToValueAtTime(0,start+dur);osc.connect(gain).connect(ctx.destination);osc.start(start);osc.stop(start+dur+.02);active.push(osc)});$('msg').textContent='テスト再生中です。'};
-$('reset').onclick=()=>{notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]}));nextId=43;$('bpm').value=110;$('meter').value='4/4';render();$('msg').textContent='テスト曲に戻しました。'};
+function stop(){active.forEach(o=>{try{o.stop()}catch(e){}});active=[];if(renderedAudio){renderedAudio.pause();renderedAudio.currentTime=0;}}
+$('stop').onclick=()=>{stop();if(window.VoiceBankStudioVoicebank)window.VoiceBankStudioVoicebank.stop();if(renderedAudio){renderedAudio.pause();renderedAudio.currentTime=0;} };
+$('play').onclick=async()=>{stop();const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext){$('msg').textContent='このブラウザは音声再生に対応していません。';return}ctx=ctx||new AudioContext();await ctx.resume();const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120)),unit=60/bpm,vol=Math.max(0,Math.min(100,Number($('volume').value)||35))/100*.18,now=ctx.currentTime+.08;notes.forEach(n=>{const f=freq(n.pitch);if(!f)return;const osc=ctx.createOscillator(),gain=ctx.createGain(),start=now+Math.max(0,n.start)*unit,dur=Math.max(.08,n.beats*unit);osc.type='triangle';osc.frequency.value=f*Math.pow(2,Number($('keyShift').value||0)/12);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(vol,start+.015);gain.gain.setValueAtTime(vol,start+dur*.82);gain.gain.linearRampToValueAtTime(0,start+dur);osc.connect(gain).connect(ctx.destination);osc.start(start);osc.stop(start+dur+.02);active.push(osc)});$('msg').textContent='テスト再生中です。'};
+$('reset').onclick=()=>{notes=seed.map((n,i)=>({id:i+1,pitch:n[0],lyric:n[1],beats:n[2],start:n[3]}));nextId=43;$('bpm').value=110;$('meter').value='4/4';$('keyShift').value='-5';render();$('msg').textContent='テスト曲に戻しました。'};
 $('sourceService').value='youtube';
 function videoInfo(url){try{const u=new URL(url),host=u.hostname.toLowerCase();if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be','www.youtu.be'].includes(host)){let id='';if(host.endsWith('youtu.be'))id=u.pathname.split('/').filter(Boolean)[0]||'';else if(u.pathname==='/watch')id=u.searchParams.get('v')||'';else{const m=u.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{11})/);if(m)id=m[1]}if(!/^[A-Za-z0-9_-]{11}$/.test(id))return null;return {kind:'youtube',id}}if(['nicovideo.jp','www.nicovideo.jp','nico.ms'].includes(host))return {kind:'nico',id:''};return null}catch(e){return null}}
 $('registerUrl').onclick=()=>{const raw=$('sourceUrl').value.trim(),info=videoInfo(raw),choice=$('sourceService').value,status=$('urlStatus'),open=$('openUrl'),preview=$('previewUrl'),box=$('videoPreview'),frame=$('youtubeFrame');open.disabled=true;preview.disabled=true;box.classList.add('hidden');frame.src='about:blank';if(!raw){status.textContent='先に動画URLを入力してください。';status.classList.add('warn');return}if(!info){status.textContent='有効なYouTube動画URL（通常動画・Shorts・ライブ）またはニコニコ動画URLを確認できませんでした。';status.classList.add('warn');return}if(choice!=='auto'&&choice!==info.kind){status.textContent='選択したサービスとURLの種類が一致していません。';status.classList.add('warn');return}status.classList.remove('warn');status.textContent=(info.kind==='youtube'?'YouTube':'ニコニコ動画')+'のURLを登録しました。\n\nYouTubeは「動画プレビュー」でアプリ内表示できます。ただし、YouTubeの音声をアプリが直接取り出すことはできないため、音程・BPMなどの解析には、利用可能な音源ファイルを②から読み込んでください。URL登録だけで解析済みにはなりません。';open.disabled=false;open.dataset.url=raw;if(info.kind==='youtube'){preview.disabled=false;preview.dataset.id=info.id;preview.dataset.url=raw}};
 $('previewUrl').onclick=()=>{const id=$('previewUrl').dataset.id;if(!id)return;const frame=$('youtubeFrame');frame.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?rel=0';$('videoPreview').classList.remove('hidden')};
 $('openUrl').onclick=()=>{const url=$('openUrl').dataset.url;if(url)window.open(url,'_blank','noopener,noreferrer')};
-$('save').onclick=()=>{const data={app:'VoiceBankStudio',version:1,bpm:Number($('bpm').value),meter:$('meter').value,octave:Number($('octave').value)||0,notes};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});download(blob,'VoiceBankStudio-project.json');$('msg').textContent='プロジェクトを保存しました。'};
+$('save').onclick=()=>{const data={app:'VoiceBankStudio',version:1,bpm:Number($('bpm').value),meter:$('meter').value,keyShift:Number($('keyShift').value)||0,notes};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});download(blob,'VoiceBankStudio-project.json');$('msg').textContent='プロジェクトを保存しました。'};
 function download(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
-$('load').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.notes))throw Error('notes');notes=d.notes.map((n,i)=>({id:Number(n.id)||i+1,pitch:String(n.pitch||'C4'),lyric:String(n.lyric||''),beats:Number(n.beats)||1,start:Number(n.start)||0}));nextId=Math.max(0,...notes.map(n=>n.id))+1;$('bpm').value=d.bpm||120;$('meter').value=d.meter||'4/4';$('octave').value=String(Math.max(-2,Math.min(2,Number(d.octave)||0)));render();$('msg').textContent='プロジェクトを読み込みました。'}catch(err){$('msg').textContent='読み込めませんでした。VoiceBankStudioで保存したJSONか確認してください。'}e.target.value=''};
+$('load').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.notes))throw Error('notes');notes=d.notes.map((n,i)=>({id:Number(n.id)||i+1,pitch:String(n.pitch||'C4'),lyric:String(n.lyric||''),beats:Number(n.beats)||1,start:Number(n.start)||0}));nextId=Math.max(0,...notes.map(n=>n.id))+1;$('bpm').value=d.bpm||120;$('meter').value=d.meter||'4/4';$('keyShift').value=String(Math.max(-6,Math.min(6,Number(d.keyShift)||0)));render();$('msg').textContent='プロジェクトを読み込みました。'}catch(err){$('msg').textContent='読み込めませんでした。VoiceBankStudioで保存したJSONか確認してください。'}e.target.value=''};
 const audioPicker=$('audioFile');
 const ANALYSIS_API='https://voicebankstudio-analysis-zulizhiren85.onrender.com';
 let uploadInProgress=false;
@@ -120,7 +200,7 @@ function refreshBatchPicker(){
  btn.disabled=!files.length;
  if(!files.length){list.textContent='複数ファイルを選ぶと、ここに一覧が表示されます。';return}
  const total=files.reduce((n,f)=>n+f.size,0);
- list.textContent='選択数：'+files.length+'件 / 合計 '+(total/1024/1024).toFixed(1)+' MB\\n'+files.map((f,i)=>(i+1)+'. '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB').join('\\n')+'\\n※複数解析は1ファイルずつ順番に送信します。通信量にご注意ください。';
+ list.textContent='選択数：'+files.length+'件 / 合計 '+(total/1024/1024).toFixed(1)+' MB\n'+files.map((f,i)=>(i+1)+'. '+f.name+' / '+(f.size/1024/1024).toFixed(1)+' MB').join('\n')+'\n※複数解析は1ファイルずつ順番に送信します。通信量にご注意ください。';
  $('serverAnalyze').disabled=false;
 }
 audioPicker.addEventListener('change',refreshBatchPicker);
@@ -136,16 +216,16 @@ $('serverAnalyzeBatch').addEventListener('click',async()=>{
  $('batchResults').textContent='複数音源の解析を開始します…';
  for(let i=0;i<files.length;i++){
    const f=files[i];
-   $('batchResults').textContent='解析中 '+(i+1)+' / '+files.length+'：'+f.name+'\\n'+summaries.join('\\n');
+   $('batchResults').textContent='解析中 '+(i+1)+' / '+files.length+'：'+f.name+'\n'+summaries.join('\n');
    const outcome=await new Promise(resolve=>uploadAudioFile(f,false,resolve));
    if(outcome.ok){
      const r=outcome.result;
      const pitch=(r.pitch_frames||[]).filter(x=>x.note).slice(0,8).map(x=>x.note).join(', ')||'音程未検出';
      summaries.push('✓ '+f.name+' — '+r.duration_seconds+'秒 / BPM '+(r.tempo_bpm||'未検出')+' / Peak '+r.peak+' / RMS '+r.rms+' / 音程 '+pitch);
    }else summaries.push('× '+f.name+' — '+outcome.error);
-   $('batchResults').textContent='進捗 '+(i+1)+' / '+files.length+'\\n'+summaries.join('\\n');
+   $('batchResults').textContent='進捗 '+(i+1)+' / '+files.length+'\n'+summaries.join('\n');
  }
- $('batchResults').textContent='複数音源の解析が完了しました。\\n'+summaries.join('\\n')+'\\n\\n各ファイルの詳しい音程データは、個別に選択して解析すると確認できます。';
+ $('batchResults').textContent='複数音源の解析が完了しました。\n'+summaries.join('\n')+'\n\n各ファイルの詳しい音程データは、個別に選択して解析すると確認できます。';
  batchBtn.disabled=false;singleBtn.disabled=false;
 });
 
@@ -210,8 +290,8 @@ async function handleAudioSelection(f){
   }
 }
 function drawWave(b){const c=$('wave'),g=c.getContext('2d'),d=b.getChannelData(0);g.clearRect(0,0,c.width,c.height);g.strokeStyle='#83d6c4';g.beginPath();const step=Math.max(1,Math.floor(d.length/c.width));for(let x=0;x<c.width;x++){let lo=1,hi=-1;for(let j=0;j<step;j++){const v=d[x*step+j]||0;lo=Math.min(lo,v);hi=Math.max(hi,v)}g.moveTo(x,(1+lo)*c.height/2);g.lineTo(x,(1+hi)*c.height/2)}g.stroke()}
-function detectPitch(data,sr){let x=data,mean=0;for(let i=0;i<x.length;i++)mean+=x[i];mean/=x.length;let rms=0;for(let i=0;i<x.length;i++){x[i]-=mean;rms+=x[i]*x[i]}rms=Math.sqrt(rms/x.length);if(rms<.012)return null;let best=-1,bestCorr=0;const min=Math.floor(sr/1000),max=Math.min(Math.floor(sr/65),x.length-2);for(let lag=min;lag<=max;lag++){let corr=0,n=x.length-lag;for(let i=0;i<n;i++)corr+=x[i]*x[i+lag];corr/=n;if(corr>bestCorr){bestCorr=corr;best=lag}}if(best<1||bestCorr<.25)return null;return {hz:sr/best,confidence:bestCorr}}
-$('analyze').onclick=async()=>{if(!decoded){$('analysis').textContent='先に音源ファイルを読み込んでください。';return}const btn=$('analyze');btn.disabled=true;$('analysis').textContent='解析中です。音源の長さによって少し時間がかかります…';await new Promise(resolve=>setTimeout(resolve,30));try{const data=decoded.getChannelData(0),sr=decoded.sampleRate,duration=decoded.duration;const pitches=[],pitchFrames=[];const stride=4,effectiveRate=sr/stride,frameSize=Math.floor(effectiveRate*.04),count=Math.min(240,Math.max(1,Math.ceil(duration/.25)));let peak=0,levelSum=0,levelCount=0;const levelStride=Math.max(1,Math.floor(data.length/250000));for(let i=0;i<data.length;i+=levelStride){const v=data[i];peak=Math.max(peak,Math.abs(v));levelSum+=v*v;levelCount++;}const rms=Math.sqrt(levelSum/Math.max(1,levelCount));for(let k=0;k<count;k++){const t=Math.min(Math.max(0,duration-.04),(k+.5)*duration/count);const pos=Math.floor(t*sr);if(pos+frameSize*stride>=data.length)continue;const frame=new Float32Array(frameSize);for(let i=0;i<frameSize;i++)frame[i]=data[pos+i*stride];const p=detectPitch(frame,effectiveRate);if(p&&p.hz>65&&p.hz<1000){pitches.push(p.hz);const midi=Math.round(69+12*Math.log2(p.hz/440)),names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];pitchFrames.push({time_seconds:t,note:names[(midi%12+12)%12]+(Math.floor(midi/12)-1)});}}let pitchText='有声音程を十分に検出できませんでした';if(pitches.length){const sorted=pitches.slice().sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)],midi=Math.round(69+12*Math.log2(median/440)),names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];pitchText='代表的な音高：約'+median.toFixed(1)+' Hz（'+names[(midi%12+12)%12]+(Math.floor(midi/12)-1)+'付近）。検出 '+pitches.length+'点'}const hop=Math.max(1,Math.floor(sr*.02)),win=Math.max(1,Math.floor(sr*.015)),peaks=[];let prev=0;for(let pos=0;pos+win<data.length;pos+=hop){let sum=0;for(let i=0;i<win;i+=4){const v=data[pos+i];sum+=v*v}const rms=Math.sqrt(sum/Math.max(1,Math.ceil(win/4)));if(rms>prev*1.7&&rms>.04)peaks.push(pos/sr);prev=prev*.8+rms*.2}const gaps=[];for(let i=1;i<peaks.length;i++){const gap=peaks[i]-peaks[i-1];if(gap>.22&&gap<1.5)gaps.push(gap)}let bpmText='BPMは未確定（音源の種類によって推定できない場合があります）',detectedBpm=null;if(gaps.length){gaps.sort((a,b)=>a-b);let bpm=Math.round(60/gaps[Math.floor(gaps.length/2)]);while(bpm<60)bpm*=2;while(bpm>180)bpm=Math.round(bpm/2);detectedBpm=bpm;bpmText='リズム候補：約'+bpm+' BPM（簡易推定・要確認）'}lastAnalysisFrames=pitchFrames;lastAnalysisTempo=detectedBpm;$('analysisToSong').disabled=!pitchFrames.length;const pitchList=pitchFrames.slice(0,20).map(x=>x.time_seconds.toFixed(2)+'秒 '+x.note).join(' / ');$('analysis').textContent='解析ベータ完了（端末内処理・通信なし）\\n長さ：'+duration.toFixed(2)+'秒\\nPeak：'+peak.toFixed(3)+' / RMS：'+rms.toFixed(3)+'\\n'+pitchText+'\\n'+bpmText+'\\n音程サンプル：'+(pitchList||'なし')+'\\n検出点数：'+pitchFrames.length+'点\\n\\n解析結果は目安です。単音程の簡易推定のため、伴奏・和音・息成分では誤判定します。歌詞認識・ボーカル分離は未対応です。';}catch(err){$('analysis').textContent='解析中にエラーが発生しました：'+(err&&err.message?err.message:'不明なエラー')+'\\n音源を短くするか、対応形式の音源で再度お試しください。'}finally{btn.disabled=false}};
+function detectPitch(data,sr){let x=data,mean=0;for(let i=0;i<x.length;i++)mean+=x[i];mean/=x.length;let rms=0;for(let i=0;i<x.length;i++){x[i]-=mean;rms+=x[i]*x[i]}rms=Math.sqrt(rms/x.length);if(rms<.012)return null;let best=-1,bestCorr=0,previousCorr=-1,previousLag=-1;const min=Math.floor(sr/1000),max=Math.min(Math.floor(sr/65),x.length-2);for(let lag=min;lag<=max;lag++){let corr=0,energyA=0,energyB=0,n=x.length-lag;for(let i=0;i<n;i++){const a=x[i],b=x[i+lag];corr+=a*b;energyA+=a*a;energyB+=b*b}const norm=Math.sqrt(energyA*energyB);corr=norm>0?corr/norm:0;if(previousLag>0&&previousCorr>=corr&&previousCorr>=.25){best=previousLag;bestCorr=previousCorr;break}previousCorr=corr;previousLag=lag}if(best<1||bestCorr<.25)return null;return {hz:sr/best,confidence:bestCorr}}
+$('analyze').onclick=async()=>{if(!decoded){$('analysis').textContent='先に音源ファイルを読み込んでください。';return}const btn=$('analyze');btn.disabled=true;$('analysis').textContent='解析中です。音源の長さによって少し時間がかかります…';await new Promise(resolve=>setTimeout(resolve,30));try{const channels=Array.from({length:decoded.numberOfChannels},(_,i)=>decoded.getChannelData(i)),sampleCount=channels[0].length,sampleAt=index=>{let sum=0;for(const channel of channels)sum+=channel[index]||0;return sum/channels.length},sr=decoded.sampleRate,duration=decoded.duration;const pitches=[],pitchFrames=[];const stride=4,effectiveRate=sr/stride,frameSize=Math.floor(effectiveRate*.05),count=Math.min(600,Math.max(1,Math.ceil(duration/.1)));let peak=0,levelSum=0,levelCount=0;const levelStride=Math.max(1,Math.floor(sampleCount/250000));for(let i=0;i<sampleCount;i+=levelStride){const v=sampleAt(i);peak=Math.max(peak,Math.abs(v));levelSum+=v*v;levelCount++;}const rms=Math.sqrt(levelSum/Math.max(1,levelCount));for(let k=0;k<count;k++){const t=Math.min(Math.max(0,duration-.05),(k+.5)*duration/count);const pos=Math.floor(t*sr);if(pos+frameSize*stride>=sampleCount)continue;const frame=new Float32Array(frameSize);for(let i=0;i<frameSize;i++)frame[i]=sampleAt(pos+i*stride);const p=detectPitch(frame,effectiveRate);if(p&&p.hz>65&&p.hz<1000){pitches.push(p.hz);const midi=Math.round(69+12*Math.log2(p.hz/440)),names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];pitchFrames.push({time_seconds:t,note:names[(midi%12+12)%12]+(Math.floor(midi/12)-1),frequency_hz:Number(p.hz.toFixed(2)),confidence:Number(p.confidence.toFixed(3))});}}let pitchText='有声音程を十分に検出できませんでした';if(pitches.length){const sorted=pitches.slice().sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)],midi=Math.round(69+12*Math.log2(median/440)),names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];pitchText='代表的な音高：約'+median.toFixed(1)+' Hz（'+names[(midi%12+12)%12]+(Math.floor(midi/12)-1)+'付近）。検出 '+pitches.length+'点'}const hop=Math.max(1,Math.floor(sr*.01)),win=hop,envelope=[];for(let pos=0;pos+win<=sampleCount;pos+=hop){let sum=0;for(let i=0;i<win;i+=4){const v=sampleAt(pos+i);sum+=v*v}envelope.push(Math.sqrt(sum/Math.max(1,Math.ceil(win/4))))}const onset=[];for(let i=1;i<envelope.length;i++)onset.push(Math.max(0,envelope[i]-envelope[i-1]));const onsetMean=onset.reduce((sum,value)=>sum+value,0)/Math.max(1,onset.length);for(let i=0;i<onset.length;i++)onset[i]-=onsetMean;const onsetEnergy=onset.reduce((sum,value)=>sum+value*value,0);let bpmText='BPMは未確定（音源の種類によって推定できない場合があります）',detectedBpm=null,tempoConfidence=0;if(onsetEnergy>1e-8){const hopSeconds=hop/sr,minLag=Math.max(1,Math.floor(60/(200*hopSeconds))),maxLag=Math.min(Math.floor(onset.length/2),Math.ceil(60/(60*hopSeconds)));let bestLag=0,bestScore=0;for(let lag=minLag;lag<=maxLag;lag++){let score=0;for(let i=0;i<onset.length-lag;i++)score+=onset[i]*onset[i+lag];if(score>bestScore){bestScore=score;bestLag=lag}}if(bestLag){let bpm=60/(bestLag*hopSeconds);while(bpm<60)bpm*=2;while(bpm>180)bpm/=2;detectedBpm=Math.round(bpm);tempoConfidence=Math.max(0,Math.min(1,bestScore/onsetEnergy));bpmText='リズム候補：約'+detectedBpm+' BPM（信頼度 '+Math.round(tempoConfidence*100)+'%・簡易推定）'}}lastAnalysisFrames=pitchFrames;lastAnalysisTempo=detectedBpm;$('analysisToSong').disabled=!pitchFrames.length;const pitchList=pitchFrames.slice(0,24).map(x=>x.time_seconds.toFixed(2)+'秒 '+x.note+' ('+Math.round(x.confidence*100)+'%)').join(' / ');$('analysis').textContent='解析ベータ完了（端末内処理・通信なし）\n長さ：'+duration.toFixed(2)+'秒\nPeak：'+peak.toFixed(3)+' / RMS：'+rms.toFixed(3)+'\n'+pitchText+'\n'+bpmText+'\n音程サンプル：'+(pitchList||'なし')+'\n検出点数：'+pitchFrames.length+'点 / 音程サンプル最大600点（長尺は間隔を自動調整）\n入力チャンネル：'+channels.length+'ch（全チャンネルをモノラル化して解析）\n\n解析結果は目安です。単音程の簡易推定のため、伴奏・和音・息成分では誤判定します。歌詞認識・ボーカル分離は未対応です。';}catch(err){$('analysis').textContent='解析中にエラーが発生しました：'+(err&&err.message?err.message:'不明なエラー')+'\n音源を短くするか、対応形式の音源で再度お試しください。'}finally{btn.disabled=false}};
 
 function importAnalysisToSong(){
  const frames=lastAnalysisFrames.filter(x=>Number.isFinite(x.time_seconds)&&x.note).sort((a,b)=>a.time_seconds-b.time_seconds);
@@ -223,18 +303,272 @@ function importAnalysisToSong(){
  render();$('msg').textContent='解析結果から '+notes.length+' 音の仮メロディを作りました。音程・歌詞・長さを確認して調整してください。';
 }
 $('analysisToSong').addEventListener('click',importAnalysisToSong);
-$('voicePlay').addEventListener('click',async()=>{
- const btn=$('voicePlay'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
- btn.disabled=true;
- const report=message=>{status.textContent=message;$('msg').textContent=message;};
+const OPENUTAU_ENGINE_API = "https://voicebankstudio-openutau-engine-539e.onrender.com";
+
+$('engineStatusCheck').addEventListener('click',async()=>{
+ const btn=$('engineStatusCheck'),status=$('engineStatus');
+ btn.disabled=true;status.classList.remove('warn');
+ status.textContent='歌唱サーバーへ接続しています…';
+ const request=(path)=>new Promise((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();xhr.open('GET',OPENUTAU_ENGINE_API+path);xhr.responseType='json';xhr.timeout=20000;
+  xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)resolve(xhr.response||{});else reject(new Error('HTTP '+xhr.status));};
+  xhr.onerror=()=>reject(new Error('通信またはCORSエラー'));
+  xhr.ontimeout=()=>reject(new Error('20秒でタイムアウトしました'));
+  xhr.send();
+ });
  try{
-  report('歌唱ボタンを受け取りました。再生エンジンを確認中…');
-  if(!api)throw Error('再生エンジンが未読込です。ページを再読み込みしてください。');
-  if(!api.isReady())throw Error('UTAU音源が未読込です。⑤でZIPまたは音源フォルダを読み込んでください。');
-  report('原音WAVを準備しています…');
-  const result=await api.playNotes(notes,{bpm:$('bpm').value,volume:$('volume').value,octave:$('octave').value});
-  report('再生開始：'+result.scheduled+'音 / エイリアス：'+(result.aliases||[]).join('、'));
- }catch(err){report('歌声再生エラー：'+(err&&err.message?err.message:String(err)));}
+  const health=await request('/health');
+  if(health.status!=='ok')throw Error('ヘルスチェック応答が不正です');
+  const engine=await request('/api/v1/engine/status');
+  const available=Array.isArray(engine.phonemizers&&engine.phonemizers.available)?engine.phonemizers.available:[];
+  const missing=Array.isArray(engine.phonemizers&&engine.phonemizers.missing)?engine.phonemizers.missing:[];
+  if(!engine.enginePrerequisitesReady)throw Error('OpenUtauの起動条件が不足しています。未検出: '+(missing.join(', ')||'詳細不明'));
+  status.textContent='接続成功：歌唱サーバー稼働中\nOpenUtau Core: '+(engine.openUtauRevision||'revision不明')+'\n利用可能な発音エンジン: '+available.join(' / ')+'\n実音源の歌声品質とiPad再生は、実際の音源で別途確認が必要です。';
+ }catch(error){
+  status.classList.add('warn');
+  status.textContent='歌唱サーバー確認エラー：'+(error&&error.message?error.message:String(error))+'\n音源ZIPを送る前に、サーバーの起動状態・通信・CORS設定を確認してください。';
+ }finally{btn.disabled=false;}
+});
+
+let inspectedArchive=null,registeredArchiveObject=null,registeredArchiveId=null;
+function detectLocalPhonemizer(aliases){
+ const normalized=aliases.map(a=>String(a||'').normalize('NFC').trim());
+ const vcv=normalized.filter(a=>/^[aiueoぁ-ゖァ-ヺ]\s+[ぁ-ゖァ-ヺ]/i.test(a)).length;
+ const cvvc=normalized.filter(a=>/^[aiueo]\s+[bcdfghjklmnpqrstvwxyz]$/i.test(a)).length;
+ if(vcv>0)return {mode:'ja-vcv',reason:'VCV連結エイリアス '+vcv+'件'};
+ if(cvvc>0)return {mode:'ja-cvvc',reason:'母音＋子音のVCエイリアス '+cvvc+'件'};
+ return {mode:'ja-vcv',reason:'VCV/CVVCの特徴を十分に検出できないため、CVフォールバック付きVCVを初期選択'};
+}
+async function inspectLoadedVoicebank(){
+ const status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
+ if(!api||!api.isReady())throw Error('先に⑤からUTAU音源を読み込んでください。');
+ const archive=api.getArchiveFile();
+ if(!archive)throw Error('OpenUtau歌唱には音源ZIPが必要です。フォルダ読み込みは端末内の原音試聴用です。');
+ if(inspectedArchive===archive&&window.voiceBankDetectedPhonemizer)return window.voiceBankDetectedPhonemizer;
+ status.textContent='端末内のoto.iniエイリアスを調べ、発音方式を自動判定しています…';
+ const detected=detectLocalPhonemizer(api.getAliases?api.getAliases():[]);
+ $('phonemizer').value=detected.mode;
+ inspectedArchive=archive;window.voiceBankDetectedPhonemizer=detected.mode;
+ status.textContent='音源チェック完了・発音方式を自動設定しました\n自動選択: '+(detected.mode==='ja-cvvc'?'日本語 CVVC':'日本語 VCV / CV')+'\n判定根拠: '+detected.reason+'\noto.iniのエイリアス '+(api.getAliases?api.getAliases().length:0)+'件を端末内で解析しました。音源ZIPはチェックのためにサーバーへ送信していません。';
+ return detected.mode;
+}
+$('inspectVoicebank').addEventListener('click',async()=>{
+ const btn=$('inspectVoicebank');btn.disabled=true;
+ try{await inspectLoadedVoicebank();}
+ catch(err){$('voicePlayStatus').textContent='音源チェックエラー：'+(err&&err.message?err.message:String(err));}
  finally{btn.disabled=false;}
 });
-</script><script src="voicebank.js?v=vcb-20261122-05" defer></script></body></html>
+['bpm','phonemizer'].forEach(id=>$(id).addEventListener('change',invalidateRenderedAudio));
+const confirmVoicePlay=$('confirmVoicePlay'),voicePlayButton=$('voicePlay');
+function setButtonReady(button,ready){button.classList.toggle('ready',ready);button.disabled=!ready;}
+function updateRenderButtons(){
+ // 再生・保存は同じ生成済みWAVを使うため、同じ条件で有効化する。
+ const hasRenderedWav=!!renderedAudioUrl;
+ setButtonReady($('playRender'),hasRenderedWav);
+ setButtonReady($('downloadRender'),hasRenderedWav);
+ $('playRender').textContent=hasRenderedWav?'▶ 生成した歌声を再生（押せます）':'▶ 生成した歌声を再生（歌唱後に有効）';
+ $('downloadRender').textContent=hasRenderedWav?'WAVを保存（押せます）':'WAVを保存（歌唱後に有効）';
+}
+confirmVoicePlay.addEventListener('change',()=>{
+ const ready=confirmVoicePlay.checked;
+ setButtonReady(voicePlayButton,ready);
+ voicePlayButton.textContent=ready?'▶ UTAU音源で歌う（押せます）':'UTAU音源で歌う（確認後に有効）';
+ $('voicePlayReadyHint').textContent=ready?'準備完了：歌唱ボタンが押せます。押すとOpenUtauで歌唱を開始します。':'歌唱ボタンは確認チェック後に有効になります。';
+});
+$('playRender').onclick=async()=>{
+ if(!renderedAudioUrl)return;
+ try{
+  // iOS Safari対策：再生ボタンを押したユーザー操作の中でAudioを生成・再生する。
+  if(!renderedAudio||renderedAudio.src!==renderedAudioUrl){
+   if(renderedAudio){renderedAudio.pause();renderedAudio.src='';}
+   renderedAudio=new Audio();
+   renderedAudio.preload='auto';
+   renderedAudio.src=renderedAudioUrl;
+   renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
+   renderedAudio.onended=()=>{const message='歌声の再生が完了しました。';$('voicePlayStatus').textContent=message;$('msg').textContent=message;};
+   renderedAudio.onerror=()=>{const message='WAVを読み込めませんでした。ファイル形式または音声データを確認してください。';$('voicePlayStatus').textContent=message;$('msg').textContent=message;};
+  }
+  await renderedAudio.play();
+  const message='生成した歌声を再生中です…';
+  $('voicePlayStatus').textContent=message;
+  $('msg').textContent=message;
+ }catch(err){
+  const message='再生できませんでした：'+(err&&err.message?err.message:String(err));
+  $('voicePlayStatus').textContent=message;
+  $('msg').textContent=message;
+ }
+};
+$('downloadRender').onclick=()=>{
+ if(!renderedAudioUrl)return;
+ const link=document.createElement('a');link.href=renderedAudioUrl;link.download='VoiceBankStudio-render.wav';
+ document.body.append(link);link.click();link.remove();
+};
+async function registerVoicebankArchive(archive,report){
+ report('音源ZIPをサーバーへ初回登録しています…');
+ const form=new FormData();form.append('archive',archive,archive.name||'voicebank.zip');
+ const result=await new Promise((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();activeVoiceRenderXhr=xhr;xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/voicebanks/register');xhr.responseType='json';xhr.timeout=2*60*60*1000;
+  xhr.upload.onprogress=e=>{if(e.lengthComputable){const percent=Math.floor(e.loaded/e.total*100);report('音源を初回送信中… '+percent+'%（'+(e.loaded/1024/1024).toFixed(1)+' / '+(e.total/1024/1024).toFixed(1)+' MB）');}};
+  xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;const body=xhr.response||{};if(xhr.status>=200&&xhr.status<300&&body.archiveId)resolve(body);else reject(new Error(body.error||body.detail||('音源登録エラー HTTP '+xhr.status)));};
+  xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録中に通信が切断されました。通信状態を確認して再試行してください。'));};
+  xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録が2時間でタイムアウトしました。通信状態とサーバーの状態を確認してください。'));};
+  xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('音源登録が中断されました。'));};
+  xhr.send(form);
+ });
+ registeredArchiveObject=archive;registeredArchiveId=result.archiveId;
+ saveRegisteredVoicebank(archive,result.archiveId);
+ if(window.VoiceBankStudioVoicebank&&window.VoiceBankStudioVoicebank.setSavedServerArchiveId){
+  try{await window.VoiceBankStudioVoicebank.setSavedServerArchiveId(result.archiveId);}catch(_){}
+ }
+ report('音源の初回登録が完了しました。次回から同じタブ内ではZIPの再送信は不要です（サーバー一時保存・最長24時間。利用中は期限を延長）。');
+ return registeredArchiveId;
+}
+function createRenderForm(archiveId,songNotes,bpm){
+ const form=new FormData();form.append('archiveId',archiveId);form.append('notesJson',JSON.stringify(songNotes));form.append('bpm',String(bpm));form.append('phonemizer',$('phonemizer').value);return form;
+}
+function voicebankSessionKey(archive){
+ return 'voicebankstudio.archive.'+[archive.name||'',archive.size,archive.lastModified||0].join(':');
+}
+function restoreRegisteredVoicebank(archive){
+ try{
+  const saved=sessionStorage.getItem(voicebankSessionKey(archive));
+  if(!saved)return false;
+  const record=JSON.parse(saved);
+  if(!record||typeof record.archiveId!=='string'||!record.archiveId)return false;
+  registeredArchiveObject=archive;registeredArchiveId=record.archiveId;
+  return true;
+ }catch(_){return false;}
+}
+function saveRegisteredVoicebank(archive,archiveId){
+ try{sessionStorage.setItem(voicebankSessionKey(archive),JSON.stringify({archiveId}));}catch(_){}
+}
+let activeVoiceRenderXhr=null,voiceRenderCancelled=false,voiceRenderGeneration=0;
+function finishVoiceRenderCancellation(reason){
+ if(!activeVoiceRenderXhr)return false;
+ voiceRenderCancelled=true;voiceRenderGeneration++;
+ const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;
+ try{xhr.abort();}catch(_){}
+ const status=$('voicePlayStatus');
+ status.textContent=reason||'歌唱処理を中断しました。';
+ $('msg').textContent=status.textContent;
+ $('cancelVoiceRender').classList.add('hidden');
+ confirmVoicePlay.checked=false;setButtonReady($('voicePlay'),false);
+ $('voicePlay').textContent='UTAU音源で歌う（確認後に有効）';
+ $('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';
+ return true;
+}
+$('cancelVoiceRender').addEventListener('click',()=>finishVoiceRenderCancellation('ブラウザからの通信を切断しました。サーバー側ですでに始まった処理は、そのまま続く場合があります。'));
+window.addEventListener('pagehide',()=>{
+ if(activeVoiceRenderXhr){voiceRenderCancelled=true;voiceRenderGeneration++;const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;try{xhr.abort();}catch(_){}}
+});
+window.addEventListener('beforeunload',()=>{
+ if(activeVoiceRenderXhr){voiceRenderCancelled=true;voiceRenderGeneration++;const xhr=activeVoiceRenderXhr;activeVoiceRenderXhr=null;try{xhr.abort();}catch(_){}}
+});
+$('voicePlay').addEventListener('click',async()=>{
+ stop();invalidateRenderedAudio();
+ const generation=++voiceRenderGeneration;
+ voiceRenderCancelled=false;
+ const btn=$('voicePlay'),status=$('voicePlayStatus'),api=window.VoiceBankStudioVoicebank;
+ btn.disabled=true;
+ $('cancelVoiceRender').classList.remove('hidden');
+ const report=message=>{status.textContent=message;$('msg').textContent=message;};
+ try{
+  report('OpenUtauエンジンを起動しています…');
+  if(!api)throw Error('UTAU音源モジュールが未読込です。ページを再読み込みしてください。');
+  if(!api.isReady())throw Error('UTAU音源が未読込です。⑤で音源を読み込んでください。');
+  const archive=api.getArchiveFile();
+  if(!archive)throw Error('OpenUtauエンジンで歌わせるには、⑤から音源ZIPを読み込んでください。フォルダ読み込みはローカル試聴用です。');
+  if(archive.size>800*1024*1024)throw Error('音源ZIPは800MB以下にしてください。');
+  if(inspectedArchive!==archive)await inspectLoadedVoicebank();
+  const bpm=Math.max(40,Math.min(240,Number($('bpm').value)||120));
+   const midiFromPitch=p=>{const hz=freq(p);return hz>0?Math.round(69+12*Math.log2(hz/440)):null;};
+  let normalizedLongVowelCount=0;
+  let previousLyric='';
+  const songNotes=[...notes].sort((a,b)=>Number(a.start)-Number(b.start)).map(n=>{
+   const originalLyric=String(n.lyric||'').trim();
+   const lyric=normalizeLongVowelLyric(originalLyric,previousLyric);
+   if(lyric!==originalLyric)normalizedLongVowelCount++;
+   previousLyric=lyric;
+   return {lyric,tone:(midiFromPitch(n.pitch)===null?null:midiFromPitch(n.pitch)+Number($('keyShift').value||0)),position:Math.round(Math.max(0,Number(n.start)||0)*480),duration:Math.round(Math.max(.0625,Number(n.beats)||1)*480)};
+  });
+  if(songNotes.some(n=>!n.lyric||n.tone===null))throw Error('歌詞または音程を確認してください。');
+  if(songNotes.some(n=>n.tone<24||n.tone>108||n.duration<30||n.duration>7680||n.position>200000))throw Error('音程・長さ・開始位置が歌唱エンジンの対応範囲外です。');
+  const orderedNotes=[...songNotes].sort((a,b)=>a.position-b.position);
+  for(let i=1;i<orderedNotes.length;i++){if(orderedNotes[i].position<orderedNotes[i-1].position+orderedNotes[i-1].duration)throw Error('現在は音符の重なりに未対応です。開始拍をずらして単旋律にしてください。');}
+  if(registeredArchiveObject!==archive||!registeredArchiveId){
+   let savedServerArchiveId=null;
+   try{savedServerArchiveId=await api.getSavedServerArchiveId();}catch(_){}
+   if(savedServerArchiveId){registeredArchiveObject=archive;registeredArchiveId=savedServerArchiveId;}
+   else if(!restoreRegisteredVoicebank(archive))await registerVoicebankArchive(archive,report);
+  }
+  report(songNotes.length+' 音の譜面をOpenUtauへ送信しています（音源ZIPの再送信なし）…'+(normalizedLongVowelCount?'\n長音記号「ー」を母音に変換：'+normalizedLongVowelCount+'箇所':''));
+  const sendRenderRequest=(form)=>{
+   return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    activeVoiceRenderXhr=xhr;
+    xhr.open('POST',OPENUTAU_ENGINE_API+'/api/v1/render');
+    xhr.responseType='blob';
+    // Allow up to two hours for long renders; server-side memory and platform limits still apply.
+    xhr.timeout=2*60*60*1000;
+    xhr.onload=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;resolve({status:xhr.status,blob:xhr.response});};
+    xhr.onerror=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱サーバーとの通信に失敗しました。CORS設定またはネットワーク接続を確認してください。'));};
+    xhr.ontimeout=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱処理が2時間でタイムアウトしました。サーバー側の処理時間・メモリ状況を確認してください。'));};
+    xhr.onabort=()=>{if(activeVoiceRenderXhr===xhr)activeVoiceRenderXhr=null;reject(new Error('歌唱リクエストが中断されました。'));};
+    xhr.send(form);
+   });
+  };
+  report('OpenUtauが42音などの譜面を処理しています。音源の大きさや音符数によって数分かかる場合があります。画面を閉じずにお待ちください…');
+  let renderResult=await sendRenderRequest(createRenderForm(registeredArchiveId,songNotes,bpm));
+  if(renderResult.status===404){
+   try{sessionStorage.removeItem(voicebankSessionKey(archive));}catch(_){}
+   try{await api.setSavedServerArchiveId(null);}catch(_){}
+   registeredArchiveId=null;registeredArchiveObject=null;
+   await registerVoicebankArchive(archive,report);
+   report('音源を再登録しました。譜面をレンダリングしています…');
+   renderResult=await sendRenderRequest(createRenderForm(registeredArchiveId,songNotes,bpm));
+  }
+  if(renderResult.status<200||renderResult.status>=300){
+   let detail='HTTP '+renderResult.status;
+   try{const body=JSON.parse(await renderResult.blob.text());detail=body.detail||body.error||detail;}catch(_){}
+   throw Error(detail);
+  }
+  const blob=renderResult.blob;
+  if(blob.size<44)throw Error('サーバーから有効なWAVが返りませんでした。');
+  if(renderedAudio){renderedAudio.pause();renderedAudio.src='';renderedAudio=null;}
+  if(renderedAudioUrl)URL.revokeObjectURL(renderedAudioUrl);
+  renderedAudioUrl=URL.createObjectURL(blob);
+  renderedAudio=new Audio(renderedAudioUrl);
+  updateRenderButtons();
+  renderedAudio.preload='auto';
+  renderedAudio.volume=Math.max(0,Math.min(100,Number($('volume').value)||35))/100;
+  renderedAudio.onended=()=>{status.textContent='歌唱が完了しました。WAV生成済みです。';$('msg').textContent=status.textContent;};
+  report('歌声の生成が完了しました。iPadのSafariでは自動再生が制限されるため、「生成した歌声を再生」を押してください。');
+ }catch(err){
+  if(!voiceRenderCancelled&&generation===voiceRenderGeneration)report('歌唱エラー：'+(err&&err.message?err.message:String(err)));
+ }
+ finally{
+  if(generation===voiceRenderGeneration){
+   activeVoiceRenderXhr=null;
+   $('cancelVoiceRender').classList.add('hidden');
+   confirmVoicePlay.checked=false;setButtonReady(btn,false);btn.textContent='UTAU音源で歌う（確認後に有効）';$('voicePlayReadyHint').textContent='歌唱ボタンは確認チェック後に有効になります。';
+  }
+ }
+});
+$('worldlineWasmTest').addEventListener('click',async()=>{
+ const btn=$('worldlineWasmTest'),status=$('worldlineWasmStatus');
+ btn.disabled=true;
+ status.textContent='iPad内でWorldline WASMを起動し、F0解析とWORLD合成を実行しています…';
+ try{
+  if(typeof window.WorldlineModule!=='function')throw Error('WASMモジュールを読み込めません。ページの読み込み完了後に再試行してください。');
+  const output=[];
+  const instance=await window.WorldlineModule({
+   print:line=>{output.push(String(line));},
+   printErr:line=>{output.push('エラー: '+String(line));}
+  });
+  const result=output.find(line=>line.includes('WORLDLINE_WASM_SMOKE_OK'));
+  if(!instance||!result)throw Error(output.join(' / ')||'Worldlineのテスト結果が返りませんでした。');
+  status.textContent='成功：端末内でF0解析・WORLD合成が完了しました。'+result.replace('WORLDLINE_WASM_SMOKE_OK','').trim();
+ }catch(err){status.textContent='WASMテスト失敗：'+(err&&err.message?err.message:String(err));}
+ finally{btn.disabled=false;}
+});
+</script><script src="assets/worldline/worldline_wasm_smoke_binary.js" defer></script><script src="voicebank-create.js?v=20261123-01" defer></script><script src="voicebank.js?v=20261122-800mib1" defer></script></body></html>

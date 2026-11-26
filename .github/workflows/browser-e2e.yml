@@ -1,0 +1,60 @@
+name: VoiceBankStudio Browser E2E
+
+on:
+  push:
+    branches:
+      - feature/openutau-safari-rebuild
+    paths:
+      - "index.html"
+      - "voicebank.js"
+      - "tests/browser/**"
+      - "playwright.config.js"
+      - ".github/workflows/browser-e2e.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "voicebank.js"
+      - "tests/browser/**"
+      - "playwright.config.js"
+      - ".github/workflows/browser-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+      - name: Create deterministic audio and voicebank fixtures
+        run: |
+          mkdir -p tests/browser/fixtures
+          python3 - <<'PY'
+          import math, os, struct, wave, zipfile
+          root = "tests/browser/fixtures"
+          wav_path = os.path.join(root, "test-tone.wav")
+          with wave.open(wav_path, "wb") as wav:
+              wav.setnchannels(1)
+              wav.setsampwidth(2)
+              wav.setframerate(22050)
+              samples = [int(9000 * math.sin(2 * math.pi * 220 * i / 22050)) for i in range(22050)]
+              wav.writeframes(b"".join(struct.pack("<h", x) for x in samples))
+          bank_path = os.path.join(root, "test-voicebank.zip")
+          with zipfile.ZipFile(bank_path, "w", zipfile.ZIP_DEFLATED) as archive:
+              archive.write(wav_path, "Voicebank/a.wav")
+              archive.writestr("Voicebank/oto.ini", "a.wav=あ,0,100,0,0,0\na.wav=a か,0,100,0,0,0\n")
+          PY
+      - name: Run browser tests
+        run: npx playwright test
